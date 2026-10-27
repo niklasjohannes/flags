@@ -24,7 +24,7 @@ export const SOURCE = {
 export const REGIONS = ['africa', 'asia', 'europe', 'north-america', 'south-america', 'oceania'];
 
 export const POLICY = {
-  scope: 'Codes come from flag-icons\' country.json, filtered to `iso: true` (ISO 3166-1 alpha-2). Kept: sovereign states and inhabited dependencies/territories whose flag is visually distinct from every other kept flag. Non-ISO codes (subdivisions such as gb-eng/es-ct, supranational flags such as eu/un/arab, placeholders such as xx, and Kosovo `xk`, which has no ISO 3166-1 code) are dropped by the ISO filter. Every other dropped ISO code is listed in `meta.excluded` with its reason.',
+  scope: 'Codes come from flag-icons\' country.json, filtered to `iso: true` (ISO 3166-1 alpha-2). Kept: sovereign states and inhabited dependencies/territories, except a territory whose flag is identical or near-identical to its own parent\'s flag (see `duplicateFlags`). Distinct flags that merely look alike (e.g. td/ro, id/mc) are kept. Non-ISO codes (subdivisions such as gb-eng/es-ct, supranational flags such as eu/un/arab, placeholders such as xx, and Kosovo `xk`, which has no ISO 3166-1 code) are dropped by the ISO filter. Every other dropped ISO code is listed in `meta.excluded` with its reason.',
   regionBasis: 'UN M49 geoscheme (Statistics Division "Standard country or area codes for statistical use"). M49 Africa, Asia, Europe and Oceania map 1:1. M49 Americas is split: Northern America, Central America and the Caribbean -> north-america; South America -> south-america. Upstream flag-icons `continent` values are ignored.',
   transcontinental: {
     ru: 'europe (M49 Eastern Europe)',
@@ -49,7 +49,7 @@ export const POLICY = {
   },
   sovereignty: '`sovereign` is true iff the entry is a UN member state or a UN non-member observer state (ps, va). Everything else is false. No judgement about recognition is made beyond that rule.',
   parentCode: '`parentCode` is the lowercase code of the single UN-member state that de facto administers a dependency/territory (for Cook Islands and Niue: the state it is in free association with). It is null for sovereign entries and for entries whose own status is disputed with no single administering state (tw, eh). A sovereignty claim by another state does not change `parentCode` (see `contested`).',
-  naming: '`name` is the common English short name, without political qualifiers, with diacritics kept (e.g. Côte d\'Ivoire, Türkiye). `aliases` are former, long-form or colloquial English names used only for typing-mode search; they are not endorsements.',
+  naming: '`name` is the common English short name, without political qualifiers, with diacritics kept (e.g. Côte d\'Ivoire, Türkiye). `aliases` are former, long-form or colloquial English names used only for typing-mode search; they are not endorsements. Former names are kept as aliases (Burma, Swaziland, Macedonia, Ceylon, Cape Verde, Czech Republic). An alias that is the shared bare name of two entries ("Korea" for kp/kr, "Congo" for cd/cg) is not given to either, so neither side is favoured; name matching still finds both.',
   contested: {
     tw: 'Taiwan: not a UN member or observer -> sovereign false. Status disputed, no single administering UN-member state -> parentCode null. Name "Taiwan" with no aliases.',
     eh: 'Western Sahara: non-self-governing territory; administration divided between Morocco and the Sahrawi Republic -> sovereign false, parentCode null. Name "Western Sahara" with no aliases. Flag as shipped by flag-icons.',
@@ -161,7 +161,7 @@ export const ENTRIES = {
   cc: territory('Cocos (Keeling) Islands', OC, 'au', ['Cocos Islands', 'Keeling Islands']),
   cd: state('Democratic Republic of the Congo', AF, ['DR Congo', 'DRC', 'Congo-Kinshasa']),
   cf: state('Central African Republic', AF, ['CAR']),
-  cg: state('Republic of the Congo', AF, ['Congo', 'Congo-Brazzaville']),
+  cg: state('Republic of the Congo', AF, ['Congo-Brazzaville']),
   ch: state('Switzerland', EU),
   ci: state('Côte d\'Ivoire', AF, ['Ivory Coast', 'Cote d\'Ivoire']),
   ck: territory('Cook Islands', OC, 'nz'),
@@ -236,7 +236,7 @@ export const ENTRIES = {
   km: state('Comoros', AF),
   kn: state('Saint Kitts and Nevis', NA, ['St Kitts and Nevis', 'St. Kitts and Nevis']),
   kp: state('North Korea', AS, ['DPRK', 'Democratic People\'s Republic of Korea']),
-  kr: state('South Korea', AS, ['Korea', 'Republic of Korea']),
+  kr: state('South Korea', AS, ['Republic of Korea']),
   kw: state('Kuwait', AS),
   ky: territory('Cayman Islands', NA, 'gb'),
   kz: state('Kazakhstan', AS),

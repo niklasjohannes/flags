@@ -34,6 +34,7 @@ Shared rules for every issue in [`SPEC.md`](SPEC.md). If something here conflict
 ## DOM safety
 
 - Never use `innerHTML`, `outerHTML`, `insertAdjacentHTML` or `document.write` with interpolated or concatenated strings. Build nodes with `document.createElement` and set `textContent` and attributes.
+- Flag SVGs are only ever rendered via `<img src="flags/<code>.svg">`. Never inline them (no `fetch` + insert, no `<object>`/`<embed>`/`<iframe>`, no `<use href="flags/…">`). Inlining would expose script-capable SVG to the DOM and leak answers through text some flags carry in `aria-label` (e.g. `gu.svg`, `sm.svg`). See [`DATA.md`](DATA.md#svg-safety).
 - Before the answer is revealed, flag `<img>` `alt` text is generic (`"Flag to identify"`). It must never contain the country name.
 - CSP-ready from day one (#8 adds `default-src 'self'`): no inline `<script>` blocks, no `style="..."` attributes, no inline event handlers (`onclick=`). Use external files, CSS classes and `addEventListener`.
 

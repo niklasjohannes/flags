@@ -6,21 +6,25 @@
 //   node scripts/build-countries.js
 //       Rebuild data/countries.json only.
 //   node scripts/build-countries.js --flags-from <extracted-flag-icons>/flags/4x3
-//       Also (re)vendor flags/<code>.svg for exactly the kept codes, and delete
-//       any other SVG in flags/. Reads the SVGs as text; never executes anything
+//       Also (re)vendor flags/<code>.svg for exactly the kept codes, replacing
+//       flags/ wholesale. Every SVG and the JSON are validated before anything is
+//       written. Reads the SVGs as text; never executes anything
 //       from the upstream checkout. Full re-vendoring steps: docs/DATA.md.
 
-import { readFileSync, writeFileSync, readdirSync, unlinkSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, renameSync, rmSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { SOURCE, REGIONS, POLICY, EXCLUDED, ENTRIES } from './country-overrides.js';
-import { findSvgSafetyIssues } from './svg-safety.js';
+import { findSvgSafetyIssues, normaliseSvgIds } from './svg-safety.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const UPSTREAM_PATH = join(REPO_ROOT, 'vendor', 'flag-icons', 'country.json');
 const OUTPUT_PATH = join(REPO_ROOT, 'data', 'countries.json');
 const FLAGS_DIR = join(REPO_ROOT, 'flags');
+// Staging for the atomic flags/ swap; inside the gitignored scratch dir.
+const STAGING_DIR = join(REPO_ROOT, '.vendor-tmp', 'flags-staging');
+const PREVIOUS_DIR = join(REPO_ROOT, '.vendor-tmp', 'flags-previous');
 
 /**
  * Combine the upstream code list with the overrides into the `countries.json`
@@ -84,36 +88,85 @@ export function buildCountries(upstream, overrides) {
     countries
   };
 }
-
 /**
- * Copy `<code>.svg` for every kept code from an extracted flag-icons `flags/4x3`
- * directory into `flags/`, and delete any SVG in `flags/` that is not kept.
+ * Read `<code>.svg` for every kept code from an extracted flag-icons `flags/4x3`
+ * directory and validate all of them, without writing anything. Throws one
+ * error listing every missing, unsafe or duplicate file.
  * @param {string} fromDir Path to the upstream `flags/4x3` directory.
  * @param {string[]} codes Kept lowercase codes.
- * @returns {void}
+ * @returns {Map<string, string>} Code -> SVG source, in `codes` order.
  */
-export function vendorFlags(fromDir, codes) {
+export function readUpstreamFlags(fromDir, codes) {
   if (typeof fromDir !== 'string' || fromDir.length === 0) {
     throw new TypeError('`fromDir` must be a non-empty string.');
   }
   if (!Array.isArray(codes)) {
     throw new TypeError('`codes` must be an array.');
   }
-  mkdirSync(FLAGS_DIR, { recursive: true });
-  const keep = new Set(codes);
+  const svgs = new Map();
+  const seen = new Map();
+  const problems = [];
   for (const code of codes) {
-    const svg = readFileSync(join(fromDir, `${code}.svg`), 'utf8');
+    let svg;
+    try {
+      svg = readFileSync(join(fromDir, `${code}.svg`), 'utf8');
+    } catch (error) {
+      problems.push(`\`${code}.svg\` could not be read (${error.code ?? error.message})`);
+      continue;
+    }
     const issues = findSvgSafetyIssues(svg);
     if (issues.length > 0) {
-      throw new Error(`Upstream \`${code}.svg\` failed the safety check: ${issues.join('; ')}.`);
+      problems.push(`\`${code}.svg\` failed the safety check: ${issues.join('; ')}`);
     }
-    writeFileSync(join(FLAGS_DIR, `${code}.svg`), svg);
-  }
-  for (const file of readdirSync(FLAGS_DIR)) {
-    if (file.endsWith('.svg') && !keep.has(file.slice(0, -'.svg'.length))) {
-      unlinkSync(join(FLAGS_DIR, file));
+    const key = normaliseSvgIds(code, svg);
+    if (seen.has(key)) {
+      problems.push(`\`${code}.svg\` is identical to \`${seen.get(key)}.svg\` apart from ids`);
     }
+    seen.set(key, code);
+    svgs.set(code, svg);
   }
+  if (problems.length > 0) {
+    throw new Error(`Refusing to vendor flags:\n  ${problems.join('\n  ')}`);
+  }
+  return svgs;
+}
+
+/**
+ * Replace `flags/` with exactly the given SVGs. The new set is written to a
+ * staging directory first and swapped in with renames, so `flags/` is never
+ * left half-written.
+ * @param {Map<string, string>} svgs Code -> validated SVG source.
+ * @returns {void}
+ */
+export function replaceFlagsDir(svgs) {
+  if (!(svgs instanceof Map)) {
+    throw new TypeError('`svgs` must be a Map.');
+  }
+  rmSync(STAGING_DIR, { recursive: true, force: true });
+  rmSync(PREVIOUS_DIR, { recursive: true, force: true });
+  mkdirSync(STAGING_DIR, { recursive: true });
+  for (const [code, svg] of svgs) {
+    writeFileSync(join(STAGING_DIR, `${code}.svg`), svg);
+  }
+  if (existsSync(FLAGS_DIR)) {
+    renameSync(FLAGS_DIR, PREVIOUS_DIR);
+  }
+  renameSync(STAGING_DIR, FLAGS_DIR);
+  rmSync(PREVIOUS_DIR, { recursive: true, force: true });
+}
+
+/**
+ * Write a file via a temporary sibling and a rename, so readers never see a
+ * partial file.
+ * @param {string} path Destination path.
+ * @param {string} content File contents.
+ * @returns {void}
+ */
+function writeFileAtomic(path, content) {
+  mkdirSync(dirname(path), { recursive: true });
+  const temporaryPath = `${path}.tmp`;
+  writeFileSync(temporaryPath, content);
+  renameSync(temporaryPath, path);
 }
 
 /**
@@ -141,15 +194,23 @@ export function buildFromRepo() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const document = buildFromRepo();
-  mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
-  writeFileSync(OUTPUT_PATH, serialiseCountries(document));
-  console.log(`Wrote ${document.countries.length} entries to data/countries.json.`);
-
   const flagIndex = process.argv.indexOf('--flags-from');
-  if (flagIndex !== -1) {
-    const fromDir = process.argv[flagIndex + 1];
-    vendorFlags(fromDir, document.countries.map((country) => country.code));
-    console.log(`Vendored ${document.countries.length} SVGs into flags/.`);
+  const fromDir = flagIndex === -1 ? null : process.argv[flagIndex + 1];
+  if (flagIndex !== -1 && (fromDir === undefined || fromDir.startsWith('--'))) {
+    throw new TypeError('`--flags-from` needs a path to an extracted flag-icons `flags/4x3` directory.');
   }
+
+  // Validate everything before writing anything.
+  const document = buildFromRepo();
+  const serialised = serialiseCountries(document);
+  const svgs = fromDir === null
+    ? null
+    : readUpstreamFlags(fromDir, document.countries.map((country) => country.code));
+
+  if (svgs !== null) {
+    replaceFlagsDir(svgs);
+    console.log(`Vendored ${svgs.size} SVGs into flags/.`);
+  }
+  writeFileAtomic(OUTPUT_PATH, serialised);
+  console.log(`Wrote ${document.countries.length} entries to data/countries.json.`);
 }

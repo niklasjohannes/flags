@@ -154,36 +154,93 @@ describe('spot checks', () => {
   it('has 193 UN members plus 2 observer states as sovereign', () => {
     assert.equal(countries.filter((country) => country.sovereign).length, 195);
   });
+
+  it('marks exactly the dependencies/territories plus tw and eh as non-sovereign', () => {
+    const nonSovereign = countries.filter((country) => !country.sovereign).map((country) => country.code);
+    assert.deepEqual(nonSovereign, [
+      'ai', 'as', 'aw', 'ax', 'bm', 'cc', 'ck', 'cw', 'cx', 'eh', 'fk', 'fo', 'gg', 'gi', 'gl', 'gu',
+      'hk', 'im', 'je', 'ky', 'mo', 'mp', 'mq', 'ms', 'nc', 'nf', 'nu', 'pf', 'pn', 'pr', 'sx', 'tc',
+      'tk', 'tw', 'vg', 'vi'
+    ]);
+  });
+
+  it('gives no entry a bare name shared by two entries as an alias', () => {
+    assert.equal(byCode.get('kr').aliases.includes('Korea'), false);
+    assert.equal(byCode.get('kp').aliases.includes('Korea'), false);
+    assert.equal(byCode.get('cg').aliases.includes('Congo'), false);
+    assert.equal(byCode.get('cd').aliases.includes('Congo'), false);
+  });
 });
 
 describe('vendored SVG safety', () => {
   for (const code of svgCodes) {
-    it(`${code}.svg has no script, handlers, foreignObject or external refs`, () => {
+    it(`${code}.svg passes the SVG allowlist`, () => {
       const svg = readFileSync(join(FLAGS_DIR, `${code}.svg`), 'utf8');
       assert.deepEqual(findSvgSafetyIssues(svg), []);
     });
   }
 
-  it('flags each unsafe construct the check is meant to catch', () => {
-    const cases = [
-      '<svg><script>alert(1)</script></svg>',
-      '<svg onload="x()"></svg>',
-      '<svg><rect onclick = "x()"/></svg>',
-      '<svg><foreignObject></foreignObject></svg>',
-      '<svg><image href="https://example.com/a.png"/></svg>',
-      '<svg><use xlink:href="//example.com/a.svg#x"/></svg>',
-      '<svg><a href="javascript:alert(1)"/></svg>',
-      '<svg><rect style="fill:url(http://example.com/x)"/></svg>',
-      '<svg><style>@import "x.css";</style></svg>',
-      '<!DOCTYPE svg [<!ENTITY x "y">]><svg/>'
-    ];
-    for (const svg of cases) {
-      assert.ok(findSvgSafetyIssues(svg).length > 0, `not caught: ${svg}`);
-    }
-  });
+  const SVG_NS = 'xmlns="http://www.w3.org/2000/svg"';
+  const XLINK_NS = 'xmlns:xlink="http://www.w3.org/1999/xlink"';
+  const wrap = (inner) => `<svg ${SVG_NS} ${XLINK_NS} viewBox="0 0 640 480">${inner}</svg>`;
 
-  it('allows internal fragment references', () => {
-    assert.deepEqual(findSvgSafetyIssues('<svg><use href="#a"/><path fill="url(#g)"/></svg>'), []);
+  // Each of these gets past a denylist of `<script`, `on*=`, `<foreignObject`
+  // and literal `http(s):`/`//` hrefs. The allowlist must reject every one.
+  const BYPASSES = {
+    'decimal char ref in href scheme': wrap('<a href="&#106;avascript:alert(1)"><path d="M0 0h9"/></a>'),
+    'hex char ref in href scheme': wrap('<use href="&#x68;ttps://evil.example/x.svg#a"/>'),
+    'char ref in xlink:href scheme': wrap('<use xlink:href="&#104;ttps://evil.example/x.svg#a"/>'),
+    'named entity': wrap('<path d="M0 0" fill="&amp;"/>'),
+    'namespaced script element': `<svg ${SVG_NS} xmlns:s="http://www.w3.org/2000/svg"><s:script>alert(1)</s:script></svg>`,
+    'SMIL animate rewriting href': wrap('<a href="#x"><animate attributeName="href" values="javascript:alert(1)"/><path d="M0 0"/></a>'),
+    'SMIL set rewriting href': wrap('<a href="#x"><set attributeName="href" to="javascript:alert(1)"/><path d="M0 0"/></a>'),
+    'unquoted external href': wrap('<use href=https://evil.example/x.svg#a />'),
+    'single-quoted external href': wrap('<use href=\'https://evil.example/x.svg#a\'/>'),
+    'CSS escape inside url()': wrap('<path d="M0 0" style="fill:url(\\68ttps://evil.example/x#g)"/>'),
+    'CSS-escaped @import': wrap('<path d="M0 0" style="@\\69mport \'https://evil.example/x.css\'"/>'),
+    'bare iframe': wrap('<iframe src="https://evil.example/"/>'),
+    'relative image': wrap('<image href="other.svg" width="9" height="9"/>'),
+    'relative use': wrap('<use href="other.svg#a"/>'),
+    'relative use via xlink:href': wrap('<use xlink:href="other.svg#a"/>'),
+    'xml-stylesheet processing instruction': `<?xml-stylesheet href="https://evil.example/x.css"?>${wrap('<path d="M0 0"/>')}`,
+    'script element': wrap('<script>alert(1)</script>'),
+    'upper-case script element': wrap('<SCRIPT>alert(1)</SCRIPT>'),
+    'slash-separated onload': `<svg/onload=alert(1)>${wrap('')}`,
+    'quoted onload on root': `<svg ${SVG_NS} onload="alert(1)"></svg>`,
+    'event handler with space before =': wrap('<path d="M0 0" onclick ="alert(1)"/>'),
+    'foreignObject': wrap('<foreignObject><div/></foreignObject>'),
+    'style element': wrap('<style>path{fill:url(https://evil.example/x#g)}</style>'),
+    'external url() in presentation attribute': wrap('<path d="M0 0" fill="url(https://evil.example/x#g)"/>'),
+    'protocol-relative url()': wrap('<path d="M0 0" fill="url( //evil.example/x#g)"/>'),
+    'CSS expression in style': wrap('<path d="M0 0" style="background:expression(alert(1))"/>'),
+    'unknown style property': wrap('<path d="M0 0" style="behavior:none"/>'),
+    'javascript: in xlink:href beside a safe href': wrap('<use href="#a" xlink:href="javascript:alert(1)"/>'),
+    'data: URI href': wrap('<a xlink:href="data:text/html,x"><path d="M0 0"/></a>'),
+    'CDATA section': wrap('<![CDATA[x]]>'),
+    'DOCTYPE with ENTITY': `<!DOCTYPE svg [<!ENTITY x "y">]>${wrap('')}`,
+    'comment': wrap('<!-- x -->'),
+    'text node': wrap('alert(1)'),
+    'second root element': `${wrap('')}<svg ${SVG_NS}></svg>`,
+    'non-svg root': '<html xmlns="http://www.w3.org/1999/xhtml"><body/></html>',
+    'xmlns:xlink rebound to another namespace': `<svg ${SVG_NS} xmlns:xlink="http://www.w3.org/1999/xhtml"></svg>`,
+    'unclosed element': wrap('<g><path d="M0 0"/>'),
+    'mismatched closing tag': wrap('<g><path d="M0 0"/></defs>')
+  };
+
+  for (const [label, svg] of Object.entries(BYPASSES)) {
+    it(`rejects: ${label}`, () => {
+      assert.ok(findSvgSafetyIssues(svg).length > 0, `not caught: ${svg}`);
+    });
+  }
+
+  it('allows same-document references and plain style declarations', () => {
+    const svg = wrap(
+      '<defs><linearGradient id="g"><stop offset="0" stop-color="#fff"/></linearGradient>' +
+      '<path id="a" d="M0 0h9"/></defs>' +
+      '<use href="#a"/><use xlink:href="#a"/>' +
+      '<path d="M0 0" fill="url(#g)" style="marker:none;text-align:center"/>'
+    );
+    assert.deepEqual(findSvgSafetyIssues(svg), []);
   });
 
   it('ships no two flags that are identical apart from their ids', () => {

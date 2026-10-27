@@ -10,7 +10,7 @@
 | `vendor/flag-icons/LICENSE` | flag-icons' MIT license, verbatim | No |
 | `scripts/country-overrides.js` | Our enrichment: names, aliases, region, sovereignty, parent, exclusions, policy text, source pin | **Yes**, this is the only file to edit |
 | `scripts/build-countries.js` | Zero-dependency generator | Rarely |
-| `scripts/svg-safety.js` | Static SVG safety check, shared by the generator and the tests | Rarely |
+| `scripts/svg-safety.js` | Allowlist SVG safety check, shared by the generator and the tests | Rarely |
 | `data/countries.json` | Generated output, served to the app | No |
 | `flags/<code>.svg` | Vendored flag-icons 4x3 SVGs, one per entry, unmodified | No |
 
@@ -90,7 +90,7 @@ Transcontinental and commonly surprising placements (all straight from M49):
 ## Naming
 
 - `name` is the common English short name, with no political qualifiers and with diacritics kept (`Côte d'Ivoire`, `Türkiye`, `Curaçao`, `Åland Islands`, `São Tomé and Príncipe`).
-- `aliases` are former, long-form or colloquial English names for typing-mode search only (e.g. Netherlands → "Holland", United States → "USA", "US", "United States of America", "America", Czechia → "Czech Republic", Myanmar → "Burma", Eswatini → "Swaziland", Côte d'Ivoire → "Ivory Coast", and an ASCII spelling wherever `name` has diacritics). An alias is a search aid, not an endorsement. Matching (case/diacritic folding, typo tolerance) is spec #3's job.
+- `aliases` are former, long-form or colloquial English names for typing-mode search only (e.g. Netherlands → "Holland", United States → "USA", "US", "United States of America", "America", Czechia → "Czech Republic", Myanmar → "Burma", Eswatini → "Swaziland", Côte d'Ivoire → "Ivory Coast", and an ASCII spelling wherever `name` has diacritics). An alias is a search aid, not an endorsement. Former names are kept as aliases (Burma, Swaziland, Macedonia, Ceylon, Cape Verde, Czech Republic). A bare name shared by two entries ("Korea" for North/South Korea, "Congo" for the two Congos) is given to neither, so neither side is favoured; typing "korea" or "congo" still matches both names. Matching (case/diacritic folding, typo tolerance) is spec #3's job.
 
 ## Contested and sensitive entries
 
@@ -114,7 +114,18 @@ Some genuinely distinct sovereign flags are near-identical: Chad/Romania, Indone
 
 ## SVG safety
 
-Every vendored SVG is checked, at vendoring time by the generator and on every CI run by `test/countries.test.js`. A file fails if it has any of: `<script`, an `on*=` event-handler attribute, `<foreignObject`, an external `href`/`xlink:href` (`http:`, `https:`, `//`), a `javascript:`/`data:` href, an external `url(…)`, a CSS `@import`, or a `DOCTYPE`/`ENTITY` declaration. Internal fragment references (`href="#a"`, `url(#g)`) are allowed. All 231 v7.5.0 files passed unmodified. None were edited or excluded for safety reasons.
+Every vendored SVG is checked against an **allowlist** in `scripts/svg-safety.js`. The generator checks at vendoring time and refuses to write anything if one file fails. `test/countries.test.js` checks again on every CI run. A file passes only if all of these hold:
+
+- It tokenises completely as one well-formed tree with a single `<svg>` root, and contains nothing but whitespace between tags (no text nodes).
+- Every element is one of the 13 used by today's files: `svg`, `g`, `defs`, `path`, `rect`, `circle`, `ellipse`, `use`, `clipPath`, `linearGradient`, `radialGradient`, `stop`, `marker`. So `script`, `foreignObject`, `iframe`, `image`, `a`, `style`, `animate`, `set` and any namespaced element (`<s:script>`) are rejected.
+- Every attribute is on the allowlist (presentation and geometry attributes, `id`, `class`, `aria-label`, `href`/`xlink:href`) and is double-quoted. Unquoted or single-quoted values, `on*` handlers and namespace prefixes other than `xmlns:xlink` (pinned to the XLink URI) are rejected.
+- `href` and `xlink:href` must be same-document `#id` references, and every `url(…)` must be `url(#id)`.
+- `style` attributes may only contain plain `property:value` declarations from a small property allowlist, with no parentheses.
+- None of these appear anywhere in the file: `&` (so no entity or character references like `&#106;avascript:`), `<?` (no XML declaration or `xml-stylesheet`; none of today's files has one), `<!` (no DOCTYPE, ENTITY, CDATA or comments), `\` (no CSS escapes like `url(\68ttps:…)`) and `@` (no `@import`).
+
+`test/countries.test.js` also feeds in a corpus of known bypasses for denylist-style checks (encoded schemes, namespaced script, SMIL `animate`/`set` on `href`, unquoted attributes, CSS escapes, `iframe`, relative `image`/`use`, `xml-stylesheet`, …) and asserts that every one is rejected. All 231 v7.5.0 files passed unmodified. None were edited or excluded for safety reasons. If a future release needs a new element or attribute, widen the allowlist deliberately and review the change.
+
+**Rendering rule:** flag SVGs are only ever rendered through `<img src="flags/<code>.svg">`, never inlined into the DOM. `<img>` doesn't run script or expose the SVG's contents. Inlining would also leak answers, because some files carry text in `aria-label` (`gu.svg` "GUAM", `sm.svg` "LIBERTAS"). Opening an SVG directly by URL is covered by the allowlist above.
 
 ## Rebuilding
 
@@ -142,4 +153,4 @@ rm -rf .vendor-tmp
 node --test
 ```
 
-If the new release adds ISO codes, the generator stops and lists them until each one is added to `ENTRIES` or `EXCLUDED` in `scripts/country-overrides.js`. Also update `SOURCE`, this file's pin section and `THIRD_PARTY_NOTICES.md`.
+The generator validates the JSON and every SVG before writing anything. It then builds the new `flags/` in `.vendor-tmp/flags-staging` and swaps it in with renames, so a failed run leaves `flags/` and `data/countries.json` untouched. If the new release adds ISO codes, the generator stops and lists them until each one is added to `ENTRIES` or `EXCLUDED` in `scripts/country-overrides.js`. Also update `SOURCE`, this file's pin section and `THIRD_PARTY_NOTICES.md`.
