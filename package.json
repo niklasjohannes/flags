@@ -1,0 +1,9 @@
+{
+  "name": "flags",
+  "private": true,
+  "description": "Zero-dependency flag-learning PWA. This file exists only to mark js/ and test/ as ES modules — never add dependencies.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
