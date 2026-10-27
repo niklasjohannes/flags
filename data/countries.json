@@ -1,0 +1,2057 @@
+{
+  "meta": {
+    "source": {
+      "name": "flag-icons",
+      "repository": "https://github.com/lipis/flag-icons",
+      "tag": "v7.5.0",
+      "tagObject": "50a8bff005239b0d2d661254094dedb9c75dbef3",
+      "commit": "7aa5b2bdddd570ece62c812c0cb588ccdc099e2e",
+      "archiveUrl": "https://codeload.github.com/lipis/flag-icons/tar.gz/refs/tags/v7.5.0",
+      "archiveSha256": "5502d1bb0bda9f258d726d3c084a2d57a07cfdfa6d2ed18cbb5a1ee11b307778",
+      "variant": "4x3",
+      "license": "MIT"
+    },
+    "regions": [
+      "africa",
+      "asia",
+      "europe",
+      "north-america",
+      "south-america",
+      "oceania"
+    ],
+    "policy": {
+      "scope": "Codes come from flag-icons' country.json, filtered to `iso: true` (ISO 3166-1 alpha-2). Kept: sovereign states and inhabited dependencies/territories whose flag is visually distinct from every other kept flag. Non-ISO codes (subdivisions such as gb-eng/es-ct, supranational flags such as eu/un/arab, placeholders such as xx, and Kosovo `xk`, which has no ISO 3166-1 code) are dropped by the ISO filter. Every other dropped ISO code is listed in `meta.excluded` with its reason.",
+      "regionBasis": "UN M49 geoscheme (Statistics Division \"Standard country or area codes for statistical use\"). M49 Africa, Asia, Europe and Oceania map 1:1. M49 Americas is split: Northern America, Central America and the Caribbean -> north-america; South America -> south-america. Upstream flag-icons `continent` values are ignored.",
+      "transcontinental": {
+        "ru": "europe (M49 Eastern Europe)",
+        "tr": "asia (M49 Western Asia)",
+        "cy": "asia (M49 Western Asia), although an EU member",
+        "am": "asia (M49 Western Asia)",
+        "az": "asia (M49 Western Asia)",
+        "ge": "asia (M49 Western Asia)",
+        "kz": "asia (M49 Central Asia)",
+        "eg": "africa (M49 Northern Africa)",
+        "id": "asia (M49 South-eastern Asia)",
+        "tl": "asia (M49 South-eastern Asia)",
+        "pg": "oceania (M49 Melanesia)",
+        "pa": "north-america (M49 Central America)",
+        "tt": "north-america (M49 Caribbean; upstream says South America)",
+        "aw": "north-america (M49 Caribbean; upstream says South America)",
+        "cw": "north-america (M49 Caribbean; upstream says South America)",
+        "gl": "north-america (M49 Northern America)",
+        "cx": "oceania (M49 Australia and New Zealand; upstream says Asia)",
+        "cc": "oceania (M49 Australia and New Zealand; upstream says Asia)",
+        "tw": "asia (not listed in M49; placed by geography, Eastern Asia)"
+      },
+      "sovereignty": "`sovereign` is true iff the entry is a UN member state or a UN non-member observer state (ps, va). Everything else is false. No judgement about recognition is made beyond that rule.",
+      "parentCode": "`parentCode` is the lowercase code of the single UN-member state that de facto administers a dependency/territory (for Cook Islands and Niue: the state it is in free association with). It is null for sovereign entries and for entries whose own status is disputed with no single administering state (tw, eh). A sovereignty claim by another state does not change `parentCode` (see `contested`).",
+      "naming": "`name` is the common English short name, without political qualifiers, with diacritics kept (e.g. Côte d'Ivoire, Türkiye). `aliases` are former, long-form or colloquial English names used only for typing-mode search; they are not endorsements.",
+      "contested": {
+        "tw": "Taiwan: not a UN member or observer -> sovereign false. Status disputed, no single administering UN-member state -> parentCode null. Name \"Taiwan\" with no aliases.",
+        "eh": "Western Sahara: non-self-governing territory; administration divided between Morocco and the Sahrawi Republic -> sovereign false, parentCode null. Name \"Western Sahara\" with no aliases. Flag as shipped by flag-icons.",
+        "ps": "Palestine: UN non-member observer state -> sovereign true, parentCode null. Name \"Palestine\", alias \"State of Palestine\".",
+        "va": "Vatican City: UN non-member observer state (as the Holy See) -> sovereign true. Alias \"Holy See\".",
+        "xk": "Kosovo: no ISO 3166-1 code (flag-icons marks it `iso: false`) -> excluded by the scope rule, not by a judgement about its status.",
+        "fk": "Falkland Islands: administered by the United Kingdom, sovereignty claimed by Argentina -> sovereign false, parentCode gb (administering state). Alias \"Malvinas\", following the UN name \"Falkland Islands (Malvinas)\".",
+        "gi": "Gibraltar: administered by the United Kingdom, sovereignty claimed by Spain -> parentCode gb.",
+        "hk": "Hong Kong: special administrative region of China -> sovereign false, parentCode cn.",
+        "mo": "Macau: special administrative region of China -> sovereign false, parentCode cn.",
+        "ck": "Cook Islands: self-governing in free association with New Zealand, not a UN member -> sovereign false, parentCode nz.",
+        "nu": "Niue: self-governing in free association with New Zealand, not a UN member -> sovereign false, parentCode nz.",
+        "cy": "Cyprus: one entry for the UN member state; Northern Cyprus has no ISO code and is not in the source list.",
+        "io": "British Indian Ocean Territory: excluded because it has no permanent population (see `meta.excluded`), not because of the Mauritius-UK sovereignty question."
+      },
+      "duplicateFlags": "A territory is excluded when flag-icons ships its parent's flag for it (byte-identical once the SVG `id` is normalised, or a colour-shade variant of the same design), because the quiz could not tell the two apart. These are listed in `meta.excluded`."
+    },
+    "excluded": {
+      "aq": "uninhabited: Antarctica, no permanent population",
+      "bl": "duplicate flag: flag-icons ships the flag of France (fr)",
+      "bq": "duplicate flag: flag-icons ships the flag of the Netherlands (nl)",
+      "bv": "uninhabited: Bouvet Island, no permanent population",
+      "gf": "duplicate flag: flag-icons ships the flag of France (fr)",
+      "gp": "duplicate flag: flag-icons ships the flag of France (fr)",
+      "gs": "uninhabited: South Georgia and the South Sandwich Islands, no permanent population (only rotating government and research staff)",
+      "hm": "uninhabited: Heard Island and McDonald Islands, no permanent population",
+      "io": "uninhabited: British Indian Ocean Territory, no permanent population (military and contractor staff only)",
+      "mf": "duplicate flag: flag-icons ships the flag of France (fr)",
+      "pm": "duplicate flag: flag-icons ships the flag of France (fr)",
+      "re": "duplicate flag: flag-icons ships the flag of France (fr)",
+      "sh": "duplicate flag: flag-icons ships the flag of the United Kingdom (gb)",
+      "sj": "duplicate flag: flag-icons ships the flag of Norway (no), differing only in colour shade",
+      "tf": "uninhabited: French Southern and Antarctic Lands, no permanent population",
+      "um": "uninhabited: United States Minor Outlying Islands, no permanent population",
+      "wf": "duplicate flag: flag-icons ships the flag of France (fr)",
+      "yt": "duplicate flag: flag-icons ships the flag of France (fr)"
+    }
+  },
+  "countries": [
+    {
+      "code": "ad",
+      "name": "Andorra",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ae",
+      "name": "United Arab Emirates",
+      "aliases": [
+        "UAE",
+        "Emirates"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "af",
+      "name": "Afghanistan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ag",
+      "name": "Antigua and Barbuda",
+      "aliases": [
+        "Antigua"
+      ],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ai",
+      "name": "Anguilla",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "al",
+      "name": "Albania",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "am",
+      "name": "Armenia",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ao",
+      "name": "Angola",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ar",
+      "name": "Argentina",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "as",
+      "name": "American Samoa",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "us"
+    },
+    {
+      "code": "at",
+      "name": "Austria",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "au",
+      "name": "Australia",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "aw",
+      "name": "Aruba",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "nl"
+    },
+    {
+      "code": "ax",
+      "name": "Åland Islands",
+      "aliases": [
+        "Aland Islands",
+        "Aland"
+      ],
+      "region": "europe",
+      "sovereign": false,
+      "parentCode": "fi"
+    },
+    {
+      "code": "az",
+      "name": "Azerbaijan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ba",
+      "name": "Bosnia and Herzegovina",
+      "aliases": [
+        "Bosnia"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bb",
+      "name": "Barbados",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bd",
+      "name": "Bangladesh",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "be",
+      "name": "Belgium",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bf",
+      "name": "Burkina Faso",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bg",
+      "name": "Bulgaria",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bh",
+      "name": "Bahrain",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bi",
+      "name": "Burundi",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bj",
+      "name": "Benin",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bm",
+      "name": "Bermuda",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "bn",
+      "name": "Brunei",
+      "aliases": [
+        "Brunei Darussalam"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bo",
+      "name": "Bolivia",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "br",
+      "name": "Brazil",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bs",
+      "name": "Bahamas",
+      "aliases": [
+        "The Bahamas"
+      ],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bt",
+      "name": "Bhutan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bw",
+      "name": "Botswana",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "by",
+      "name": "Belarus",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "bz",
+      "name": "Belize",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ca",
+      "name": "Canada",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cc",
+      "name": "Cocos (Keeling) Islands",
+      "aliases": [
+        "Cocos Islands",
+        "Keeling Islands"
+      ],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "au"
+    },
+    {
+      "code": "cd",
+      "name": "Democratic Republic of the Congo",
+      "aliases": [
+        "DR Congo",
+        "DRC",
+        "Congo-Kinshasa"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cf",
+      "name": "Central African Republic",
+      "aliases": [
+        "CAR"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cg",
+      "name": "Republic of the Congo",
+      "aliases": [
+        "Congo",
+        "Congo-Brazzaville"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ch",
+      "name": "Switzerland",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ci",
+      "name": "Côte d'Ivoire",
+      "aliases": [
+        "Ivory Coast",
+        "Cote d'Ivoire"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ck",
+      "name": "Cook Islands",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "nz"
+    },
+    {
+      "code": "cl",
+      "name": "Chile",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cm",
+      "name": "Cameroon",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cn",
+      "name": "China",
+      "aliases": [
+        "People's Republic of China",
+        "PRC"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "co",
+      "name": "Colombia",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cr",
+      "name": "Costa Rica",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cu",
+      "name": "Cuba",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cv",
+      "name": "Cabo Verde",
+      "aliases": [
+        "Cape Verde"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cw",
+      "name": "Curaçao",
+      "aliases": [
+        "Curacao"
+      ],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "nl"
+    },
+    {
+      "code": "cx",
+      "name": "Christmas Island",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "au"
+    },
+    {
+      "code": "cy",
+      "name": "Cyprus",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "cz",
+      "name": "Czechia",
+      "aliases": [
+        "Czech Republic"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "de",
+      "name": "Germany",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "dj",
+      "name": "Djibouti",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "dk",
+      "name": "Denmark",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "dm",
+      "name": "Dominica",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "do",
+      "name": "Dominican Republic",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "dz",
+      "name": "Algeria",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ec",
+      "name": "Ecuador",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ee",
+      "name": "Estonia",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "eg",
+      "name": "Egypt",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "eh",
+      "name": "Western Sahara",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": false,
+      "parentCode": null
+    },
+    {
+      "code": "er",
+      "name": "Eritrea",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "es",
+      "name": "Spain",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "et",
+      "name": "Ethiopia",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "fi",
+      "name": "Finland",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "fj",
+      "name": "Fiji",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "fk",
+      "name": "Falkland Islands",
+      "aliases": [
+        "Falklands",
+        "Malvinas"
+      ],
+      "region": "south-america",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "fm",
+      "name": "Micronesia",
+      "aliases": [
+        "Federated States of Micronesia"
+      ],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "fo",
+      "name": "Faroe Islands",
+      "aliases": [
+        "Faroes"
+      ],
+      "region": "europe",
+      "sovereign": false,
+      "parentCode": "dk"
+    },
+    {
+      "code": "fr",
+      "name": "France",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ga",
+      "name": "Gabon",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gb",
+      "name": "United Kingdom",
+      "aliases": [
+        "UK",
+        "Great Britain",
+        "Britain"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gd",
+      "name": "Grenada",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ge",
+      "name": "Georgia",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gg",
+      "name": "Guernsey",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "gh",
+      "name": "Ghana",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gi",
+      "name": "Gibraltar",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "gl",
+      "name": "Greenland",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "dk"
+    },
+    {
+      "code": "gm",
+      "name": "Gambia",
+      "aliases": [
+        "The Gambia"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gn",
+      "name": "Guinea",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gq",
+      "name": "Equatorial Guinea",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gr",
+      "name": "Greece",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gt",
+      "name": "Guatemala",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gu",
+      "name": "Guam",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "us"
+    },
+    {
+      "code": "gw",
+      "name": "Guinea-Bissau",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "gy",
+      "name": "Guyana",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "hk",
+      "name": "Hong Kong",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": false,
+      "parentCode": "cn"
+    },
+    {
+      "code": "hn",
+      "name": "Honduras",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "hr",
+      "name": "Croatia",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ht",
+      "name": "Haiti",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "hu",
+      "name": "Hungary",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "id",
+      "name": "Indonesia",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ie",
+      "name": "Ireland",
+      "aliases": [
+        "Republic of Ireland"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "il",
+      "name": "Israel",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "im",
+      "name": "Isle of Man",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "in",
+      "name": "India",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "iq",
+      "name": "Iraq",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ir",
+      "name": "Iran",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "is",
+      "name": "Iceland",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "it",
+      "name": "Italy",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "je",
+      "name": "Jersey",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "jm",
+      "name": "Jamaica",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "jo",
+      "name": "Jordan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "jp",
+      "name": "Japan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ke",
+      "name": "Kenya",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "kg",
+      "name": "Kyrgyzstan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "kh",
+      "name": "Cambodia",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ki",
+      "name": "Kiribati",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "km",
+      "name": "Comoros",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "kn",
+      "name": "Saint Kitts and Nevis",
+      "aliases": [
+        "St Kitts and Nevis",
+        "St. Kitts and Nevis"
+      ],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "kp",
+      "name": "North Korea",
+      "aliases": [
+        "DPRK",
+        "Democratic People's Republic of Korea"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "kr",
+      "name": "South Korea",
+      "aliases": [
+        "Korea",
+        "Republic of Korea"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "kw",
+      "name": "Kuwait",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ky",
+      "name": "Cayman Islands",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "kz",
+      "name": "Kazakhstan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "la",
+      "name": "Laos",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "lb",
+      "name": "Lebanon",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "lc",
+      "name": "Saint Lucia",
+      "aliases": [
+        "St Lucia",
+        "St. Lucia"
+      ],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "li",
+      "name": "Liechtenstein",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "lk",
+      "name": "Sri Lanka",
+      "aliases": [
+        "Ceylon"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "lr",
+      "name": "Liberia",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ls",
+      "name": "Lesotho",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "lt",
+      "name": "Lithuania",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "lu",
+      "name": "Luxembourg",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "lv",
+      "name": "Latvia",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ly",
+      "name": "Libya",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ma",
+      "name": "Morocco",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mc",
+      "name": "Monaco",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "md",
+      "name": "Moldova",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "me",
+      "name": "Montenegro",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mg",
+      "name": "Madagascar",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mh",
+      "name": "Marshall Islands",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mk",
+      "name": "North Macedonia",
+      "aliases": [
+        "Macedonia"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ml",
+      "name": "Mali",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mm",
+      "name": "Myanmar",
+      "aliases": [
+        "Burma"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mn",
+      "name": "Mongolia",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mo",
+      "name": "Macau",
+      "aliases": [
+        "Macao"
+      ],
+      "region": "asia",
+      "sovereign": false,
+      "parentCode": "cn"
+    },
+    {
+      "code": "mp",
+      "name": "Northern Mariana Islands",
+      "aliases": [
+        "Northern Marianas"
+      ],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "us"
+    },
+    {
+      "code": "mq",
+      "name": "Martinique",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "fr"
+    },
+    {
+      "code": "mr",
+      "name": "Mauritania",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ms",
+      "name": "Montserrat",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "mt",
+      "name": "Malta",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mu",
+      "name": "Mauritius",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mv",
+      "name": "Maldives",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mw",
+      "name": "Malawi",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mx",
+      "name": "Mexico",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "my",
+      "name": "Malaysia",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "mz",
+      "name": "Mozambique",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "na",
+      "name": "Namibia",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "nc",
+      "name": "New Caledonia",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "fr"
+    },
+    {
+      "code": "ne",
+      "name": "Niger",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "nf",
+      "name": "Norfolk Island",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "au"
+    },
+    {
+      "code": "ng",
+      "name": "Nigeria",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ni",
+      "name": "Nicaragua",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "nl",
+      "name": "Netherlands",
+      "aliases": [
+        "Holland",
+        "The Netherlands"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "no",
+      "name": "Norway",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "np",
+      "name": "Nepal",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "nr",
+      "name": "Nauru",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "nu",
+      "name": "Niue",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "nz"
+    },
+    {
+      "code": "nz",
+      "name": "New Zealand",
+      "aliases": [
+        "Aotearoa"
+      ],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "om",
+      "name": "Oman",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pa",
+      "name": "Panama",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pe",
+      "name": "Peru",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pf",
+      "name": "French Polynesia",
+      "aliases": [
+        "Tahiti"
+      ],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "fr"
+    },
+    {
+      "code": "pg",
+      "name": "Papua New Guinea",
+      "aliases": [
+        "PNG"
+      ],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ph",
+      "name": "Philippines",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pk",
+      "name": "Pakistan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pl",
+      "name": "Poland",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pn",
+      "name": "Pitcairn Islands",
+      "aliases": [
+        "Pitcairn"
+      ],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "pr",
+      "name": "Puerto Rico",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "us"
+    },
+    {
+      "code": "ps",
+      "name": "Palestine",
+      "aliases": [
+        "State of Palestine"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pt",
+      "name": "Portugal",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "pw",
+      "name": "Palau",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "py",
+      "name": "Paraguay",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "qa",
+      "name": "Qatar",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ro",
+      "name": "Romania",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "rs",
+      "name": "Serbia",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ru",
+      "name": "Russia",
+      "aliases": [
+        "Russian Federation"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "rw",
+      "name": "Rwanda",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sa",
+      "name": "Saudi Arabia",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sb",
+      "name": "Solomon Islands",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sc",
+      "name": "Seychelles",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sd",
+      "name": "Sudan",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "se",
+      "name": "Sweden",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sg",
+      "name": "Singapore",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "si",
+      "name": "Slovenia",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sk",
+      "name": "Slovakia",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sl",
+      "name": "Sierra Leone",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sm",
+      "name": "San Marino",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sn",
+      "name": "Senegal",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "so",
+      "name": "Somalia",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sr",
+      "name": "Suriname",
+      "aliases": [
+        "Surinam"
+      ],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ss",
+      "name": "South Sudan",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "st",
+      "name": "São Tomé and Príncipe",
+      "aliases": [
+        "Sao Tome and Principe"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sv",
+      "name": "El Salvador",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sx",
+      "name": "Sint Maarten",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "nl"
+    },
+    {
+      "code": "sy",
+      "name": "Syria",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "sz",
+      "name": "Eswatini",
+      "aliases": [
+        "Swaziland"
+      ],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tc",
+      "name": "Turks and Caicos Islands",
+      "aliases": [],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "td",
+      "name": "Chad",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tg",
+      "name": "Togo",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "th",
+      "name": "Thailand",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tj",
+      "name": "Tajikistan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tk",
+      "name": "Tokelau",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": false,
+      "parentCode": "nz"
+    },
+    {
+      "code": "tl",
+      "name": "Timor-Leste",
+      "aliases": [
+        "East Timor"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tm",
+      "name": "Turkmenistan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tn",
+      "name": "Tunisia",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "to",
+      "name": "Tonga",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tr",
+      "name": "Türkiye",
+      "aliases": [
+        "Turkey"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tt",
+      "name": "Trinidad and Tobago",
+      "aliases": [
+        "Trinidad"
+      ],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tv",
+      "name": "Tuvalu",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "tw",
+      "name": "Taiwan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": false,
+      "parentCode": null
+    },
+    {
+      "code": "tz",
+      "name": "Tanzania",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ua",
+      "name": "Ukraine",
+      "aliases": [],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ug",
+      "name": "Uganda",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "us",
+      "name": "United States",
+      "aliases": [
+        "USA",
+        "US",
+        "United States of America",
+        "America"
+      ],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "uy",
+      "name": "Uruguay",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "uz",
+      "name": "Uzbekistan",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "va",
+      "name": "Vatican City",
+      "aliases": [
+        "Holy See",
+        "Vatican"
+      ],
+      "region": "europe",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "vc",
+      "name": "Saint Vincent and the Grenadines",
+      "aliases": [
+        "St Vincent and the Grenadines",
+        "St. Vincent"
+      ],
+      "region": "north-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ve",
+      "name": "Venezuela",
+      "aliases": [],
+      "region": "south-america",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "vg",
+      "name": "British Virgin Islands",
+      "aliases": [
+        "Virgin Islands (British)"
+      ],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "gb"
+    },
+    {
+      "code": "vi",
+      "name": "U.S. Virgin Islands",
+      "aliases": [
+        "US Virgin Islands",
+        "United States Virgin Islands"
+      ],
+      "region": "north-america",
+      "sovereign": false,
+      "parentCode": "us"
+    },
+    {
+      "code": "vn",
+      "name": "Vietnam",
+      "aliases": [
+        "Viet Nam"
+      ],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "vu",
+      "name": "Vanuatu",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ws",
+      "name": "Samoa",
+      "aliases": [],
+      "region": "oceania",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "ye",
+      "name": "Yemen",
+      "aliases": [],
+      "region": "asia",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "za",
+      "name": "South Africa",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "zm",
+      "name": "Zambia",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    },
+    {
+      "code": "zw",
+      "name": "Zimbabwe",
+      "aliases": [],
+      "region": "africa",
+      "sovereign": true,
+      "parentCode": null
+    }
+  ]
+}

@@ -11,9 +11,12 @@ A zero-dependency progressive web app for learning the flags of the world with s
 | `index.html` | App entry point |
 | `css/` | Stylesheets |
 | `js/` | App modules (SRS engine, quiz engine, views) |
-| `data/` | Country metadata (`countries.json`) |
+| `data/` | Country metadata (`countries.json`, generated; see [`docs/DATA.md`](docs/DATA.md)) |
 | `flags/` | Vendored flag SVGs |
 | `icons/` | PWA / home-screen icons |
+| `scripts/` | Dev-only data generator (`build-countries.js`) and its hand-maintained overrides |
+| `vendor/` | Unmodified upstream inputs (flag-icons code list and license) |
+| `test/` | `node --test` suites |
 
 ## Running the tests
 
