@@ -1,10 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 
 import {
   EASE_STEP_DOWN,
   EASE_STEP_UP,
   INITIAL_EASE_FACTOR,
+  MAX_DATE,
   MAX_EASE_FACTOR,
   MAX_INTERVAL_DAYS,
   MIN_EASE_FACTOR,
@@ -168,6 +170,48 @@ describe('updateCardState', () => {
     assert.equal(sixDays.dueDate, '2026-04-02');
   });
 
+  it('grows the interval by at least a day even from a short repaired interval', () => {
+    const start = makeState('fr', { repetitions: 3, intervalDays: 1, easeFactor: MIN_EASE_FACTOR });
+    const intervals = answerRepeatedly(true, 6, start).map((s) => s.intervalDays);
+    // round(1 x 1.3) = 1 would stall without the +1 floor; ease also rises 0.05 per answer.
+    assert.deepEqual(intervals, [2, 3, 4, 6, 9, 14]);
+  });
+
+  it(`clamps computed due dates to ${MAX_DATE}`, () => {
+    const lapsed = updateCardState(createCardState('fr'), false, MAX_DATE);
+    assert.equal(lapsed.dueDate, MAX_DATE);
+    const mature = makeState('fr', { intervalDays: 300, easeFactor: MAX_EASE_FACTOR });
+    assert.equal(updateCardState(mature, true, '9999-06-01').dueDate, MAX_DATE);
+    // ...and the clamped state is still accepted everywhere.
+    assert.doesNotThrow(() => updateCardState(lapsed, true, MAX_DATE));
+  });
+
+  it('computes the same due dates under DST-observing local time zones', () => {
+    // Local-time day arithmetic (e.g. `new Date(y, m, d)` + 24h) goes wrong on
+    // 25-hour fall-back days; run the engine in a child process with `TZ` set.
+    const script = `
+      import { createCardState, updateCardState } from ${JSON.stringify(new URL('../js/srs.js', import.meta.url).href)};
+      const fresh = createCardState('fr');
+      const second = { ...fresh, repetitions: 1, intervalDays: 1, dueDate: '2026-01-01' };
+      console.log(JSON.stringify([
+        updateCardState(fresh, false, '2026-11-01').dueDate,
+        updateCardState(fresh, false, '2026-03-08').dueDate,
+        updateCardState(second, true, '2026-10-30').dueDate,
+        updateCardState(fresh, false, '2026-10-25').dueDate,
+        updateCardState(second, true, '2026-03-27').dueDate
+      ]));
+    `;
+    const expected = ['2026-11-02', '2026-03-09', '2026-11-05', '2026-10-26', '2026-04-02'];
+    for (const tz of ['America/New_York', 'Europe/London', 'Australia/Lord_Howe']) {
+      const child = spawnSync(process.execPath, ['--input-type=module', '--eval', script], {
+        env: { ...process.env, TZ: tz },
+        encoding: 'utf8'
+      });
+      assert.equal(child.status, 0, child.stderr);
+      assert.deepEqual(JSON.parse(child.stdout), expected, `TZ=${tz}`);
+    }
+  });
+
   it('does not mutate its input', () => {
     const state = makeState('fr');
     const snapshot = structuredClone(state);
@@ -266,6 +310,29 @@ describe('pickRound', () => {
     const states = { zz: makeState('zz') };
     const round = pickRound({ states, countries, today: TODAY, rng: createRng(1) });
     assert.deepEqual([...round].sort(), ['c0', 'c1', 'c2']);
+  });
+
+  it('returns an empty round for an empty scope', () => {
+    const countries = makeCountries('eu', 5, 'europe');
+    assert.deepEqual(pickRound({ states: {}, countries: [], today: TODAY, rng: createRng(1) }), []);
+    assert.deepEqual(pickRound({ states: {}, countries, today: TODAY, region: 'asia', rng: createRng(1) }), []);
+  });
+
+  it('rejects a state whose `code` disagrees with its key', () => {
+    const countries = [{ code: 'fr', region: 'europe' }, { code: 'de', region: 'europe' }];
+    const duplicated = { fr: makeState('de'), de: makeState('de') };
+    const foreign = { fr: makeState('jp') };
+    for (const fn of [pickRound, countDue]) {
+      assert.throws(() => fn({ states: duplicated, countries, today: TODAY, rng: createRng(1) }), TypeError);
+      assert.throws(
+        () => fn({ states: foreign, countries, today: TODAY, region: 'europe', rng: createRng(1) }),
+        TypeError
+      );
+      assert.throws(
+        () => fn({ states: { fr: createCardState('de') }, countries, today: TODAY, rng: createRng(1) }),
+        TypeError
+      );
+    }
   });
 
   it('scopes to a region', () => {
@@ -487,6 +554,15 @@ describe('sanitizeStates', () => {
       de: createCardState('de'),
       es: makeState('es', { easeFactor: MIN_EASE_FACTOR, intervalDays: MAX_INTERVAL_DAYS })
     });
+  });
+
+  it('pulls an implausibly far-future `dueDate` back when `today` is given', () => {
+    const raw = { fr: makeState('fr', { dueDate: '9999-01-01' }), de: makeState('de', { dueDate: '2026-04-01' }) };
+    assert.equal(sanitizeStates(raw).fr.dueDate, '9999-01-01');
+    const repaired = sanitizeStates(raw, TODAY);
+    assert.equal(repaired.fr.dueDate, '2027-03-28');
+    assert.equal(repaired.de.dueDate, '2026-04-01');
+    assert.throws(() => sanitizeStates(raw, 'today'), TypeError);
   });
 
   it('produces states the other functions accept', () => {

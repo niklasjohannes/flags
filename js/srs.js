@@ -108,6 +108,9 @@ export const REGIONS = Object.freeze([
   'oceania'
 ]);
 
+/** Latest date the engine ever computes; later due dates are clamped to it. */
+export const MAX_DATE = '9999-12-31';
+
 const MS_PER_DAY = 86_400_000;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const CODE_PATTERN = /^[A-Za-z0-9-]{1,16}$/;
@@ -136,8 +139,10 @@ function formatDate(ms) {
   return `${year}-${month}-${day}`;
 }
 
+// Clamped to `MAX_DATE`, so a computed date always stays a valid
+// four-digit-year date string.
 function addDays(date, days) {
-  return formatDate(parseDate(date) + days * MS_PER_DAY);
+  return formatDate(Math.min(parseDate(date) + days * MS_PER_DAY, parseDate(MAX_DATE)));
 }
 
 function diffDays(later, earlier) {
@@ -311,7 +316,10 @@ export function updateCardState(state, correct, today) {
   } else if (repetitions === 2) {
     intervalDays = SECOND_INTERVAL_DAYS;
   } else {
-    intervalDays = Math.round(Math.max(state.intervalDays, 1) * state.easeFactor);
+    // Grow by at least a day, so a repaired state with a short interval
+    // (e.g. `intervalDays: 1` at `repetitions: 3`) cannot stall.
+    const previous = Math.max(state.intervalDays, 1);
+    intervalDays = Math.max(Math.round(previous * state.easeFactor), previous + 1);
   }
   intervalDays = Math.min(intervalDays, MAX_INTERVAL_DAYS);
 
@@ -415,12 +423,19 @@ function classifyScope(states, countries, today, region) {
     }
     seen.add(country.code);
     const state = Object.hasOwn(states, country.code) ? states[country.code] : undefined;
-    if (isNewCard(state)) {
+    const isNew = isNewCard(state);
+    if (state !== undefined && state !== null && state.code !== country.code) {
+      throw new TypeError(`\`states.${country.code}.code\` must match its key, got \`${state.code}\`.`);
+    }
+    if (isNew) {
       groups.fresh.push(country.code);
-    } else if (state.dueDate <= today) {
-      groups.due.push(state);
+      continue;
+    }
+    const entry = { code: country.code, state };
+    if (state.dueDate <= today) {
+      groups.due.push(entry);
     } else {
-      groups.notYetDue.push(state);
+      groups.notYetDue.push(entry);
     }
   }
   return groups;
@@ -470,13 +485,13 @@ export function pickRound({ states, countries, today, region, rng, n = ROUND_SIZ
   const overflow = shuffledFresh.slice(NEW_FLAG_LIMIT);
 
   const tierOne = [
-    ...due.map((state) => ({ code: state.code, weight: dueWeight(state, today) })),
+    ...due.map(({ code, state }) => ({ code, weight: dueWeight(state, today) })),
     ...trickle.map((code) => ({ code, weight: NEW_FLAG_WEIGHT }))
   ];
   const picked = sampleWeighted(tierOne, n, rng);
 
-  const tierTwo = notYetDue.map((state) => ({
-    code: state.code,
+  const tierTwo = notYetDue.map(({ code, state }) => ({
+    code,
     weight: notYetDueWeight(state, today)
   }));
   picked.push(...sampleWeighted(tierTwo, n - picked.length, rng));
@@ -522,13 +537,22 @@ function sanitizeInteger(value, fallback, min) {
  * real `YYYY-MM-DD` date. Otherwise it is repaired: a missing `code` is taken
  * from the key, non-numeric fields fall back to fresh-state defaults, numbers
  * are floored to integers / clamped into range, a `null` `dueDate` resets the
- * entry to a fresh state, and unknown fields are dropped.
+ * entry to a fresh state, and unknown fields are dropped. When `today` is
+ * given, a `dueDate` more than `MAX_INTERVAL_DAYS` ahead (which no answer can
+ * produce) is pulled back to `today + MAX_INTERVAL_DAYS`, so a corrupt date
+ * cannot park a flag forever.
  *
  * @param {unknown} raw Parsed JSON (any value).
+ * @param {string} [today] Local date, `YYYY-MM-DD`; enables the far-future
+ *   `dueDate` repair.
  * @returns {Object<string, object>} New, valid state map (empty if `raw` is
  *   not an object).
  */
-export function sanitizeStates(raw) {
+export function sanitizeStates(raw, today) {
+  if (today !== undefined) {
+    assertDate(today, 'today');
+  }
+  const latestDueDate = today === undefined ? MAX_DATE : addDays(today, MAX_INTERVAL_DAYS);
   const result = {};
   if (!isPlainObject(raw)) {
     return result;
@@ -555,7 +579,7 @@ export function sanitizeStates(raw) {
       repetitions: sanitizeInteger(entry.repetitions, 0, 0),
       easeFactor,
       intervalDays: Math.min(MAX_INTERVAL_DAYS, sanitizeInteger(entry.intervalDays, 1, 1)),
-      dueDate: entry.dueDate,
+      dueDate: entry.dueDate > latestDueDate ? latestDueDate : entry.dueDate,
       lapses: sanitizeInteger(entry.lapses, 0, 0)
     };
   }
