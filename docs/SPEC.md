@@ -1,6 +1,6 @@
 # Flag-learning PWA — build spec
 
-This breaks the design plan (see `/Users/niklas.johannes/.claude/plans/i-want-a-simple-twinkling-kahn.md` for the full UX rationale) into a sequence of GitHub issues, each sized to be handed to its own session with no other context. Read this file in full before picking up any issue below — it is the shared source of truth every issue references instead of repeating itself.
+This breaks the design plan (see [`PLAN.md`](PLAN.md) for the full UX rationale) into a sequence of GitHub issues, each sized to be handed to its own session with no other context. Read this file in full before picking up any issue below — it is the shared source of truth every issue references instead of repeating itself.
 
 ## Principal-engineer review findings (incorporated below)
 
