@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (defensive — this project has zero npm dependencies)
+node_modules/
+npm-debug.log*
+
+# Local Claude Code state (worktrees, per-machine settings)
+.claude/worktrees/
+.claude/settings.local.json
