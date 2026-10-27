@@ -39,8 +39,10 @@ const FIXED_ATTRIBUTE_VALUES = {
 };
 
 const FRAGMENT_REF = /^#[A-Za-z_][\w.-]*$/;
-const URL_CALL = /url\(([^)]*)\)/gi;
-const FRAGMENT_URL_ARG = /^#[A-Za-z_][\w.-]*$/;
+// Every `url(` (closed or not; CSS accepts an unclosed one at the end of a
+// value) must be immediately followed by `#id)`, with no whitespace.
+const URL_OPEN = /url\(/gi;
+const FRAGMENT_URL_REST = /^#[A-Za-z_][\w.-]*\)/;
 const STYLE_DECLARATION = /^\s*(-?[a-z][a-z-]*)\s*:\s*([A-Za-z0-9%.-]+)\s*$/;
 
 // Characters that never appear in the allowlisted corpus and would open an
@@ -83,8 +85,8 @@ function checkAttribute(element, name, value) {
     return [`${where}: only same-document \`#id\` references are allowed`];
   }
   const issues = [];
-  for (const [, argument] of value.matchAll(URL_CALL)) {
-    if (!FRAGMENT_URL_ARG.test(argument.trim())) {
+  for (const match of value.matchAll(URL_OPEN)) {
+    if (!FRAGMENT_URL_REST.test(value.slice(match.index + match[0].length))) {
       issues.push(`${where}: only \`url(#id)\` is allowed`);
     }
   }
