@@ -1,0 +1,8 @@
+# Normalise line endings to LF everywhere (repo and checkout), so
+# test/countries.test.js's byte-for-byte regeneration check also holds on
+# Windows clones with core.autocrlf.
+* text=auto eol=lf
+*.svg text eol=lf
+*.json text eol=lf
+*.js text eol=lf
+*.md text eol=lf
