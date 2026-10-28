@@ -1,7 +1,15 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { MODE_LABELS, REGION_LABELS, createChoiceGroup, el, formatRegion } from '../js/ui.js';
+import {
+  KEYBOARD_MIN_HEIGHT_PX,
+  MODE_LABELS,
+  REGION_LABELS,
+  createChoiceGroup,
+  el,
+  formatRegion,
+  isKeyboardOpen
+} from '../js/ui.js';
 import { REGIONS } from '../js/srs.js';
 import { QUIZ_MODES } from '../js/storage.js';
 
@@ -150,3 +158,21 @@ describe('createChoiceGroup rejects', () => {
   });
 });
 
+describe('isKeyboardOpen', () => {
+  it('is true only when the visual viewport is clearly shorter than the layout', () => {
+    // An iOS keyboard (portrait iPhone).
+    assert.equal(isKeyboardOpen({ layoutHeight: 812, viewportHeight: 812 - 335 }), true);
+    assert.equal(isKeyboardOpen({ layoutHeight: 375, viewportHeight: 375 - 200 }), true);
+    // No keyboard, however short the viewport (GitHub #35).
+    assert.equal(isKeyboardOpen({ layoutHeight: 375, viewportHeight: 375 }), false);
+    assert.equal(isKeyboardOpen({ layoutHeight: 500, viewportHeight: 500 }), false);
+    // Toolbars sliding in or out are not a keyboard.
+    assert.equal(isKeyboardOpen({ layoutHeight: 812, viewportHeight: 812 - KEYBOARD_MIN_HEIGHT_PX }), false);
+    assert.equal(isKeyboardOpen({ layoutHeight: 812, viewportHeight: 812 - KEYBOARD_MIN_HEIGHT_PX - 1 }), true);
+  });
+
+  it('rejects bad input', () => {
+    assert.throws(() => isKeyboardOpen(), TypeError);
+    assert.throws(() => isKeyboardOpen({ layoutHeight: 812, viewportHeight: '477' }), TypeError);
+  });
+});
