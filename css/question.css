@@ -52,9 +52,11 @@
  * `visualViewport` (the part of the screen the keyboard leaves), and the
  * flag gets what is left there after the view's chrome above it
  * (`--question-chrome-top`, set per view), the input and
- * `--typing-visible-rows` suggestion rows. With no keyboard that is more
- * than the usual 45dvh cap, so nothing changes. `--viewport-height` is
- * unset without `visualViewport`, and the flag then keeps its usual size.
+ * `--typing-visible-rows` suggestion rows. Only while the keyboard is
+ * open (`.keyboard-open` on `<html>`, from the same handler): with no
+ * keyboard, a short viewport (a landscape phone, a short window) keeps the
+ * usual 45dvh cap (GitHub #35). Without `visualViewport` the class is never
+ * set, and the flag keeps its usual size.
  */
 .question[data-mode="typing"] {
   --typing-visible-rows: 3;
@@ -66,7 +68,7 @@
   );
 }
 
-.question[data-mode="typing"] .question-flag {
+.keyboard-open .question[data-mode="typing"] .question-flag {
   max-width: calc(
     min(45dvh, max(5rem, var(--viewport-height, 100dvh) - var(--typing-reserve))) * 4 / 3
   );

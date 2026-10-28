@@ -30,6 +30,33 @@ export const MODE_LABELS = Object.freeze({
   typing: 'Typing'
 });
 
+/**
+ * How much shorter (px) than the layout viewport the visual viewport must be
+ * before the on-screen keyboard counts as open (`isKeyboardOpen`). An iOS
+ * keyboard takes about 290-335 px; browser toolbars sliding in and out
+ * change it by less.
+ */
+export const KEYBOARD_MIN_HEIGHT_PX = 100;
+
+/**
+ * Whether an on-screen keyboard is covering part of the layout.
+ *
+ * @param {object} options
+ * @param {number} options.layoutHeight Layout viewport height (px), e.g.
+ *   `document.documentElement.clientHeight`, which the iOS keyboard does not
+ *   change (unlike `window.innerHeight` there).
+ * @param {number} options.viewportHeight Unzoomed visual viewport height
+ *   (px): `visualViewport.height * visualViewport.scale`.
+ * @returns {boolean} `true` if the visual viewport is more than
+ *   `KEYBOARD_MIN_HEIGHT_PX` shorter.
+ */
+export function isKeyboardOpen({ layoutHeight, viewportHeight } = {}) {
+  if (!Number.isFinite(layoutHeight) || !Number.isFinite(viewportHeight)) {
+    throw new TypeError('`layoutHeight` and `viewportHeight` must be finite numbers.');
+  }
+  return layoutHeight - viewportHeight > KEYBOARD_MIN_HEIGHT_PX;
+}
+
 // Tags the app builds. Extend deliberately (via the orchestrator); never add
 // script-capable ones (`script`, `style`, `iframe`, `object`, `embed`, `a`
 // with untrusted URLs, `svg`).
