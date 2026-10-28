@@ -12,7 +12,9 @@
 //
 // The first answer to each flag is saved immediately, so leaving mid-round
 // keeps progress; that is also why Exit needs no confirmation. Re-asks of a
-// missed flag are never saved or scored.
+// missed flag are never saved or scored. What gets saved follows the
+// early-review and once-per-visit rules in js/practice-round.js; a visit
+// lasts from mount to unmount, so it spans Keep going.
 
 import {
   answerCurrent,
@@ -31,6 +33,12 @@ import { el } from '../ui.js';
 
 /** Delay (ms) between revealing a correct answer and the next question. */
 export const CORRECT_ADVANCE_MS = 700;
+
+/**
+ * Clicks on a new question are ignored for this long (ms), so a double press
+ * of Enter or a double tap on Next cannot answer the next question.
+ */
+export const ANSWER_GUARD_MS = 300;
 
 let controller = null;
 
@@ -67,6 +75,17 @@ export function mount(container, context) {
 
   let round = null;
   let question = null;
+  let persistedCodes = new Set();
+
+  // Swallow clicks (including Enter / Space activations) on the question
+  // just after it appears, before they reach its buttons.
+  let guardUntil = 0;
+  questionArea.addEventListener('click', (event) => {
+    if (performance.now() < guardUntil) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+  }, { capture: true, signal });
 
   function showSummary() {
     const { correct, total } = getScore(round);
@@ -100,6 +119,7 @@ export function mount(container, context) {
       signal,
       onAnswer: (chosenCode) => handleAnswer(chosenCode === code)
     });
+    guardUntil = performance.now() + ANSWER_GUARD_MS;
     question.focus();
   }
 
@@ -110,7 +130,17 @@ export function mount(container, context) {
       // Load fresh before writing, so the save never rolls back state written
       // elsewhere since this round started.
       const today = localToday();
-      saveStates(recordAnswer(loadStates(today), result.code, correct, today));
+      const recorded = recordAnswer({
+        states: loadStates(today),
+        code: result.code,
+        correct,
+        today,
+        persistedCodes
+      });
+      persistedCodes = recorded.persistedCodes;
+      if (recorded.changed) {
+        saveStates(recorded.states);
+      }
     }
     question.reveal();
     if (correct) {

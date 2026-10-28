@@ -4,26 +4,43 @@
 // Pure module: no DOM, no `localStorage`, no clock. A round is an immutable
 // value; every function returns a new one.
 //
+//   let persistedCodes = new Set();          // once per practice visit
 //   let round = createRound(pickRound(...));
 //   while (!isRoundComplete(round)) {
 //     const code = getCurrentCode(round);
 //     ...ask, then:
 //     const { round: next, isFirstAnswer } = answerCurrent(round, correct);
-//     if (isFirstAnswer) saveStates(recordAnswer(states, code, correct, today));
+//     if (isFirstAnswer) {
+//       const result = recordAnswer({ states, code, correct, today, persistedCodes });
+//       persistedCodes = result.persistedCodes;
+//       if (result.changed) saveStates(result.states);
+//     }
 //     round = next;
 //   }
 //   getScore(round); // { correct, total }
 //
-// Rules (js/srs.js module header):
+// Round rules (js/srs.js module header):
 //   - The FIRST answer to each flag in the round is the one that counts: it is
-//     scored and the caller persists it with `recordAnswer`.
-//   - A miss puts the flag back into the queue `REQUEUE_GAP` questions later
-//     (`requeueLapse`). A re-ask is reinforcement only: it is never scored and
-//     never persisted. A re-ask that is missed again is re-queued again, so a
-//     flag keeps coming back until it is answered correctly once.
+//     scored, and the caller offers it to `recordAnswer` for persisting.
+//   - A first-answer miss puts the flag back into the queue `REQUEUE_GAP`
+//     questions later (`requeueLapse`). That re-ask is reinforcement only: it
+//     is never scored and never persisted. Each flag is re-asked at most once
+//     per round, even if the re-ask is missed too.
 //   - Progress counts distinct flags, so re-asks do not advance it.
+//
+// Persistence rules (`recordAnswer`). Once due flags run out, `pickRound`
+// fills rounds with flags that are not due yet, which are often the ones
+// answered minutes ago. Without these rules each Keep going (or Done, then
+// Start) would grow their intervals again, e.g. 1 -> 6 -> 16 days in one
+// sitting.
+//   - Early review: a seen flag that is not due yet (`dueDate > today`)
+//     answered correctly keeps its persisted state (reinforcement only). A
+//     miss is still a real lapse. Due and never-seen flags always update.
+//   - Once per practice visit: a code whose state was changed since the
+//     practice view mounted is never changed again during that visit (Keep
+//     going keeps the visit). Its answers are still scored in each round.
 
-import { createCardState, requeueLapse, updateCardState } from './srs.js';
+import { createCardState, isNewCard, requeueLapse, updateCardState } from './srs.js';
 
 function assertCodes(codes) {
   if (!Array.isArray(codes) || !codes.every((code) => typeof code === 'string' && code !== '')) {
@@ -122,7 +139,8 @@ export function answerCurrent(round, correct) {
   const isFirstAnswer = !Object.hasOwn(round.results, code);
   const results = isFirstAnswer ? { ...round.results, [code]: correct } : { ...round.results };
   const rest = round.queue.slice(1);
-  const queue = correct ? rest : requeueLapse(rest, code);
+  // Only a first-answer miss is re-queued: one re-ask per flag per round.
+  const queue = correct || !isFirstAnswer ? rest : requeueLapse(rest, code);
   return { round: freezeRound(round.total, queue, results), code, isFirstAnswer };
 }
 
@@ -155,19 +173,40 @@ export function getScore(round) {
 }
 
 /**
- * Apply a first answer to the persisted card states.
+ * Apply a first answer in a round to the persisted card states, following the
+ * early-review and once-per-visit rules (module header).
  *
- * @param {Object<string, object>} states Card states keyed by code (from
- *   `loadStates`).
- * @param {string} code The answered flag.
- * @param {boolean} correct Whether the answer was correct.
- * @param {string} today Local date, `YYYY-MM-DD`.
- * @returns {Object<string, object>} New state map; `states` is not modified.
+ * @param {object} options
+ * @param {Object<string, object>} options.states Card states keyed by code
+ *   (from `loadStates`).
+ * @param {string} options.code The answered flag.
+ * @param {boolean} options.correct Whether the answer was correct.
+ * @param {string} options.today Local date, `YYYY-MM-DD`.
+ * @param {ReadonlySet<string>} [options.persistedCodes=new Set()] Codes
+ *   already changed during this practice visit.
+ * @returns {{ states: Object<string, object>, persistedCodes: ReadonlySet<string>, changed: boolean }}
+ *   `changed` says whether the answer changed the flag's state (save
+ *   `states` only then). If it did, `states` is a new map and
+ *   `persistedCodes` a new set that includes `code`; otherwise both are the
+ *   ones passed in. Neither input is modified.
  */
-export function recordAnswer(states, code, correct, today) {
+export function recordAnswer({ states, code, correct, today, persistedCodes = new Set() } = {}) {
   if (typeof states !== 'object' || states === null || Array.isArray(states)) {
     throw new TypeError('`states` must be an object mapping country codes to card states.');
   }
+  if (!(persistedCodes instanceof Set)) {
+    throw new TypeError('`persistedCodes` must be a `Set` of country codes, or omitted.');
+  }
   const current = Object.hasOwn(states, code) ? states[code] : createCardState(code);
-  return { ...states, [code]: updateCardState(current, correct, today) };
+  // Validates `current`, `correct` and `today` even when nothing changes.
+  const updated = updateCardState(current, correct, today);
+  const isEarlyReview = !isNewCard(current) && current.dueDate > today;
+  if (persistedCodes.has(code) || (isEarlyReview && correct)) {
+    return { states, persistedCodes, changed: false };
+  }
+  return {
+    states: { ...states, [code]: updated },
+    persistedCodes: new Set([...persistedCodes, code]),
+    changed: true
+  };
 }

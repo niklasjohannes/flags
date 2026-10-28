@@ -1,5 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   answerCurrent,
@@ -11,11 +14,44 @@ import {
   isRoundComplete,
   recordAnswer
 } from '../js/practice-round.js';
-import { REQUEUE_GAP, createCardState, updateCardState } from '../js/srs.js';
+import {
+  FIRST_INTERVAL_DAYS,
+  REQUEUE_GAP,
+  createCardState,
+  pickRound,
+  updateCardState
+} from '../js/srs.js';
 
 // ---- Helpers ----
 
+const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const { countries } = JSON.parse(readFileSync(join(REPO_ROOT, 'data', 'countries.json'), 'utf8'));
+
 const TODAY = '2026-10-28';
+const EARLIER = '2026-10-20';
+
+// Mulberry32: small, fast, deterministic PRNG returning [0, 1).
+function createRng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
+
+// A flag answered correctly once on `EARLIER`: due `EARLIER + 1`, i.e. due
+// (overdue) by `TODAY`.
+function dueState(code) {
+  return updateCardState(createCardState(code), true, EARLIER);
+}
+
+// A flag answered correctly once today: due tomorrow, i.e. not yet due.
+function notYetDueState(code) {
+  return updateCardState(createCardState(code), true, TODAY);
+}
 const CODES = ['fr', 'de', 'it', 'es', 'pt', 'nl', 'be', 'at', 'ch', 'pl'];
 
 // Answer the current question, returning only the next round.
@@ -107,14 +143,25 @@ describe('answerCurrent', () => {
     assert.equal(result.round.results.fr, false);
   });
 
-  it('re-queues a missed re-ask again', () => {
-    let round = answer(createRound(['fr', 'de']), false);
+  it('does not re-queue a missed re-ask', () => {
+    let round = answer(createRound(['fr', 'de', 'it']), false);
+    round = answer(round, true);
     round = answer(round, true);
     assert.equal(getCurrentCode(round), 'fr');
+    assert.equal(isReask(round), true);
     round = answer(round, false);
-    assert.deepEqual(round.queue, ['fr']);
-    round = answer(round, true);
     assert.equal(isRoundComplete(round), true);
+  });
+
+  it('re-asks the last flag right away, once, when it is missed', () => {
+    let round = createRound(['fr', 'de']);
+    round = answer(round, true);
+    round = answer(round, false);
+    assert.deepEqual(round.queue, ['de']);
+    assert.equal(isReask(round), true);
+    round = answer(round, false);
+    assert.equal(isRoundComplete(round), true);
+    assert.deepEqual(getScore(round), { correct: 1, total: 2 });
   });
 
   it('does not modify the round it was given', () => {
@@ -142,8 +189,9 @@ describe('a full round', () => {
   });
 
   it('asks every flag at least once, plus one re-ask per miss', () => {
+    // Re-asks are always missed here too; still only one each.
     const missed = new Set(['fr', 'it', 'pl']);
-    const { asked, round } = playRound(CODES, (code, reask) => reask || !missed.has(code));
+    const { asked, round } = playRound(CODES, (code) => !missed.has(code));
     assert.equal(asked.length, CODES.length + missed.size);
     assert.deepEqual(new Set(asked), new Set(CODES));
     for (const code of missed) {
@@ -203,30 +251,166 @@ describe('getProgress', () => {
 
 describe('recordAnswer', () => {
   it('creates state for a never-seen flag', () => {
-    const states = recordAnswer({}, 'fr', true, TODAY);
-    assert.deepEqual(states.fr, updateCardState(createCardState('fr'), true, TODAY));
+    const result = recordAnswer({ states: {}, code: 'fr', correct: true, today: TODAY });
+    assert.equal(result.changed, true);
+    assert.deepEqual(result.states.fr, updateCardState(createCardState('fr'), true, TODAY));
+    assert.equal(result.states.fr.repetitions, 1);
+    assert.deepEqual([...result.persistedCodes], ['fr']);
+  });
+
+  it('records a miss on a never-seen flag as a lapse', () => {
+    const { states } = recordAnswer({ states: {}, code: 'fr', correct: false, today: TODAY });
+    assert.equal(states.fr.lapses, 1);
+    assert.equal(states.fr.repetitions, 0);
+  });
+
+  it('updates a due flag and keeps the others', () => {
+    const fr = dueState('fr');
+    const de = dueState('de');
+    const { states, changed } = recordAnswer({ states: { fr, de }, code: 'fr', correct: true, today: TODAY });
+    assert.equal(changed, true);
+    assert.deepEqual(states.fr, updateCardState(fr, true, TODAY));
+    assert.equal(states.fr.repetitions, 2);
+    assert.equal(states.de, de);
+  });
+
+  it('applies a miss on a due flag', () => {
+    const fr = dueState('fr');
+    const { states } = recordAnswer({ states: { fr }, code: 'fr', correct: false, today: TODAY });
+    assert.equal(states.fr.repetitions, 0);
+    assert.equal(states.fr.lapses, fr.lapses + 1);
+  });
+
+  it('treats a flag due exactly today as due', () => {
+    const fr = updateCardState(createCardState('fr'), true, '2026-10-27');
+    assert.equal(fr.dueDate, TODAY);
+    const { changed } = recordAnswer({ states: { fr }, code: 'fr', correct: true, today: TODAY });
+    assert.equal(changed, true);
+  });
+
+  it('leaves an early (not yet due) flag unchanged on a correct answer', () => {
+    const before = { fr: notYetDueState('fr') };
+    const persistedCodes = new Set();
+    const result = recordAnswer({ states: before, code: 'fr', correct: true, today: TODAY, persistedCodes });
+    assert.equal(result.changed, false);
+    assert.equal(result.states, before);
+    assert.equal(result.persistedCodes, persistedCodes);
+    assert.equal(persistedCodes.size, 0);
+  });
+
+  it('still lapses an early (not yet due) flag on a miss', () => {
+    const fr = notYetDueState('fr');
+    const result = recordAnswer({ states: { fr }, code: 'fr', correct: false, today: TODAY });
+    assert.equal(result.changed, true);
+    assert.deepEqual(result.states.fr, updateCardState(fr, false, TODAY));
+    assert.equal(result.states.fr.lapses, fr.lapses + 1);
+  });
+
+  it('never changes a code twice in one visit', () => {
+    const first = recordAnswer({ states: { fr: dueState('fr') }, code: 'fr', correct: false, today: TODAY });
+    const second = recordAnswer({
+      states: first.states,
+      code: 'fr',
+      correct: false,
+      today: TODAY,
+      persistedCodes: first.persistedCodes
+    });
+    assert.equal(second.changed, false);
+    assert.equal(second.states, first.states);
+    assert.equal(second.states.fr.lapses, 1);
+  });
+
+  it('persists the same code once across two rounds of one visit', () => {
+    let states = {};
+    let persistedCodes = new Set();
+    let saves = 0;
+    for (let i = 0; i < 2; i += 1) {
+      let round = createRound(['fr', 'de']);
+      while (!isRoundComplete(round)) {
+        const result = answerCurrent(round, true);
+        if (result.isFirstAnswer) {
+          const recorded = recordAnswer({ states, code: result.code, correct: true, today: TODAY, persistedCodes });
+          ({ states, persistedCodes } = recorded);
+          saves += recorded.changed ? 1 : 0;
+        }
+        round = result.round;
+      }
+      assert.deepEqual(getScore(round), { correct: 2, total: 2 });
+    }
+    assert.equal(saves, 2);
     assert.equal(states.fr.repetitions, 1);
   });
 
-  it('updates an existing state and keeps the others', () => {
-    const seen = updateCardState(createCardState('fr'), true, '2026-10-20');
-    const other = updateCardState(createCardState('de'), false, '2026-10-20');
-    const states = recordAnswer({ fr: seen, de: other }, 'fr', false, TODAY);
-    assert.equal(states.fr.repetitions, 0);
-    assert.equal(states.fr.lapses, seen.lapses + 1);
-    assert.equal(states.de, other);
-  });
-
-  it('does not modify the given states', () => {
-    const states = {};
-    recordAnswer(states, 'fr', true, TODAY);
-    assert.deepEqual(states, {});
+  it('does not modify its inputs', () => {
+    const states = { fr: dueState('fr') };
+    const snapshot = structuredClone(states);
+    const persistedCodes = new Set(['de']);
+    recordAnswer({ states, code: 'fr', correct: true, today: TODAY, persistedCodes });
+    assert.deepEqual(states, snapshot);
+    assert.deepEqual([...persistedCodes], ['de']);
   });
 
   it('rejects bad arguments', () => {
-    assert.throws(() => recordAnswer(null, 'fr', true, TODAY), TypeError);
-    assert.throws(() => recordAnswer([], 'fr', true, TODAY), TypeError);
-    assert.throws(() => recordAnswer({}, 'fr', 'yes', TODAY), TypeError);
-    assert.throws(() => recordAnswer({}, 'fr', true, '28/10/2026'));
+    assert.throws(() => recordAnswer(), TypeError);
+    assert.throws(() => recordAnswer({ states: null, code: 'fr', correct: true, today: TODAY }), TypeError);
+    assert.throws(() => recordAnswer({ states: [], code: 'fr', correct: true, today: TODAY }), TypeError);
+    assert.throws(() => recordAnswer({ states: {}, code: 'fr', correct: 'yes', today: TODAY }), TypeError);
+    assert.throws(() => recordAnswer({ states: {}, code: 'fr', correct: true, today: '28/10/2026' }));
+    assert.throws(
+      () => recordAnswer({ states: {}, code: 'fr', correct: true, today: TODAY, persistedCodes: ['de'] }),
+      TypeError
+    );
+    // Validated even when the code would be skipped.
+    assert.throws(
+      () => recordAnswer({ states: {}, code: 'fr', correct: 'yes', today: TODAY, persistedCodes: new Set(['fr']) }),
+      TypeError
+    );
   });
+});
+
+// ---- Several rounds in one sitting ----
+
+describe('several all-correct rounds on one day', () => {
+  // Play `rounds` all-correct rounds over South America (13 flags, so
+  // `pickRound` soon refills rounds with flags answered minutes ago).
+  // `newVisitEachRound` models Done then Start instead of Keep going.
+  function playSitting({ rounds, newVisitEachRound, seed }) {
+    const rng = createRng(seed);
+    let states = {};
+    let persistedCodes = new Set();
+    for (let i = 0; i < rounds; i += 1) {
+      if (newVisitEachRound) {
+        persistedCodes = new Set();
+      }
+      let round = createRound(pickRound({ states, countries, today: TODAY, region: 'south-america', rng }));
+      assert.equal(round.total, 10);
+      while (!isRoundComplete(round)) {
+        const result = answerCurrent(round, true);
+        if (result.isFirstAnswer) {
+          ({ states, persistedCodes } = recordAnswer({
+            states,
+            code: result.code,
+            correct: true,
+            today: TODAY,
+            persistedCodes
+          }));
+        }
+        round = result.round;
+      }
+    }
+    return states;
+  }
+
+  for (const newVisitEachRound of [false, true]) {
+    const label = newVisitEachRound ? 'Done then Start' : 'Keep going';
+    it(`never grows an interval past the first step (${label})`, () => {
+      for (let seed = 1; seed <= 20; seed += 1) {
+        const states = playSitting({ rounds: 4, newVisitEachRound, seed });
+        for (const state of Object.values(states)) {
+          assert.equal(state.repetitions, 1, `seed ${seed}: ${state.code}`);
+          assert.ok(state.intervalDays <= FIRST_INTERVAL_DAYS, `seed ${seed}: ${state.code} at ${state.intervalDays} days`);
+        }
+      }
+    });
+  }
 });
