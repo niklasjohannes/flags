@@ -12,7 +12,8 @@
  * No red/green, and the accent never marks a miss.
  *
  * The check and cross are pixel drawings (img/mark-*.svg) used as a mask
- * over the text colour, since Pixelify Sans has no glyph for them. They are
+ * over the text colour, matching the pixel accents (the UI face, Courier
+ * Prime, has no cross glyph either). They are
  * decoration: `reveal()`'s hidden text is what screen readers get.
  */
 
@@ -206,6 +207,7 @@
 
 .question-input::placeholder {
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
   opacity: 1;
 }
 

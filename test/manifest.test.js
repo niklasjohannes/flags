@@ -163,7 +163,7 @@ describe('index.html head', () => {
     assert.deepEqual(preloads.map(({ attrs }) => attrs.href), fontUrls);
     for (const { attrs } of preloads) {
       assert.equal(attrs.as, 'font');
-      assert.equal(attrs.type, 'font/woff2');
+      assert.equal(attrs.type, attrs.href.endsWith('.ttf') ? 'font/ttf' : 'font/woff2');
     }
     // Fonts are fetched in CORS mode, so a preload without `crossorigin` is
     // never used and the font downloads twice.

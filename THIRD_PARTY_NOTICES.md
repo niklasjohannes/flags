@@ -33,21 +33,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Pixelify Sans
+## Courier Prime
 
-- Project: https://github.com/eifetx/Pixelify-Sans (by Stefie Justprince)
-- Version: **1.000** (the font's own version string; the repo has no tags or releases)
-- Commit: `39df74aba80df8157546034b878e8be1eb565ced` (`main`, the same commit Google Fonts ships in `google/fonts` `ofl/pixelifysans`)
-- Files: https://raw.githubusercontent.com/eifetx/Pixelify-Sans/39df74aba80df8157546034b878e8be1eb565ced/fonts/webfonts/PixelifySans%5Bwght%5D.woff2 (sha256 `807d95f498d0ccc257522b02d34ed48efe4e01496ffa345dab3779dd84ad08f5`) and https://raw.githubusercontent.com/eifetx/Pixelify-Sans/39df74aba80df8157546034b878e8be1eb565ced/OFL.txt (sha256 `b66ba46f511a851ab09998b5a5a9fdbb102545a3864cb993095e1745996873a7`)
-- Used for: `fonts/PixelifySans-wght.woff2`, all UI text (`css/style.css`). The font is unmodified; only the file is renamed from `PixelifySans[wght].woff2`, because the service worker's precache list allows no brackets in paths.
+- Project: https://github.com/quoteunquoteapps/CourierPrime (by Alan Dague-Greene for Quote-Unquote Apps)
+- Version: **3.018** (the fonts' own version string; the repo has no tags or releases)
+- Commit: `7fd585a2dd4c1612c79b3308e300923d1c13df93` (`master` HEAD, the commit Google Fonts onboarded; its TTFs and `OFL.txt` are byte-identical to `google/fonts` `ofl/courierprime/` at `9862abc066c9b83bf84c3e8ed1fc2d8d48f9bbf0`)
+- Files (upstream has no `.woff2`, so the TTFs are shipped as they are):
+  - https://raw.githubusercontent.com/quoteunquoteapps/CourierPrime/7fd585a2dd4c1612c79b3308e300923d1c13df93/fonts/ttf/CourierPrime-Regular.ttf (sha256 `72f793376f8e2841656bf21d77a5de010f2929bd6956a22ee848ad0c7eb978af`)
+  - https://raw.githubusercontent.com/quoteunquoteapps/CourierPrime/7fd585a2dd4c1612c79b3308e300923d1c13df93/fonts/ttf/CourierPrime-Bold.ttf (sha256 `ff1f38786c849d1c41fa8e447960abdb2bd75fdfb0cfcdeb524fad65a5af3638`)
+  - https://raw.githubusercontent.com/quoteunquoteapps/CourierPrime/7fd585a2dd4c1612c79b3308e300923d1c13df93/OFL.txt (sha256 `9a755af092b494944c99f471be6fddd19b006a448fefdc4717e4ee0aa09a97b0`)
+- Used for: `fonts/CourierPrime-Regular.ttf` and `fonts/CourierPrime-Bold.ttf`, all UI text (`css/style.css`). Unmodified and not renamed.
 - License: SIL Open Font License 1.1, with no Reserved Font Name. Full text below, also at [`fonts/OFL.txt`](fonts/OFL.txt).
 
 ```
-Copyright 2021 The Pixelify Sans Project Authors (https://github.com/eifetx/Pixelify-Sans)
+Copyright 2015 The Courier Prime Project Authors (https://github.com/quoteunquoteapps/CourierPrime).
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 This license is copied below, and is also available with a FAQ at:
-https://scripts.sil.org/OFL
+http://scripts.sil.org/OFL
 
 
 -----------------------------------------------------------

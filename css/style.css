@@ -13,52 +13,59 @@
  * an outline. No red/green anywhere. Contrast against white: text 18.9:1,
  * muted text 5.7:1, accent 5.2:1.
  *
- * Pixel look (GitHub #24): all UI text is set in Pixelify Sans, corners are
- * square, buttons cast a hard offset shadow, and the right/wrong marks are
- * pixel drawings (img/mark-*.svg, since the font has no check or cross).
- * Flags keep their own look: no rule here touches the flag images.
+ * Pixel look (GitHub #24): all UI text is set in Courier Prime, a sturdier
+ * Courier, corners are square, buttons cast a hard offset shadow, and the
+ * right/wrong marks are pixel drawings (img/mark-*.svg). Flags keep their
+ * own look: no rule here touches the flag images.
  */
 
 /* ---- Fonts ---- */
 
 /*
- * Pixelify Sans 1.000 (fonts/, SIL OFL 1.1, see THIRD_PARTY_NOTICES.md):
- * one variable file covering weights 400-700. `swap` shows the fallback
- * until it arrives, which only happens on a first visit: index.html
- * preloads it and sw.js precaches it.
+ * Courier Prime 3.018 (fonts/, SIL OFL 1.1, see THIRD_PARTY_NOTICES.md),
+ * Regular and Bold; 600 resolves to Bold. `swap` shows the fallback until
+ * it arrives, which only happens on a first visit: index.html preloads both
+ * files and sw.js precaches them.
  *
- * The fallback face is a local Arial (or Helvetica / Roboto) resized to
- * Pixelify's metrics, so the swap barely rewraps or moves the text:
- * `size-adjust` is Pixelify's width over Arial's across every country name
- * and UI label (1.06 regular, 1.02 bold), and the overrides are Pixelify's
- * ascent (0.92 em) and descent (0.28 em) divided by it, since `size-adjust`
- * scales them too.
+ * The fallback face is a local Courier New (or Courier) matched to Courier
+ * Prime's metrics, so the swap barely rewraps or moves the text. Both are
+ * monospaced at 0.6 em (measured: within 0.1%), so `size-adjust` is 100%
+ * and the overrides are simply Courier Prime's ascent (0.781 em) and
+ * descent (0.342 em).
  */
 @font-face {
-  font-family: "Pixelify Sans";
-  src: url("../fonts/PixelifySans-wght.woff2") format("woff2");
+  font-family: "Courier Prime";
+  src: url("../fonts/CourierPrime-Regular.ttf") format("truetype");
   font-style: normal;
-  font-weight: 400 700;
+  font-weight: 400;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Pixelify Sans Fallback";
-  src: local("Arial"), local("ArialMT"), local("Helvetica"), local("Roboto");
+  font-family: "Courier Prime";
+  src: url("../fonts/CourierPrime-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Courier Prime Fallback";
+  src: local("Courier New"), local("CourierNewPSMT"), local("Courier");
   font-weight: 400 500;
-  size-adjust: 106%;
-  ascent-override: 86.8%;
-  descent-override: 26.4%;
+  size-adjust: 100%;
+  ascent-override: 78.1%;
+  descent-override: 34.2%;
   line-gap-override: 0%;
 }
 
 @font-face {
-  font-family: "Pixelify Sans Fallback";
-  src: local("Arial Bold"), local("Arial-BoldMT"), local("Helvetica Bold"), local("Helvetica-Bold"), local("Roboto Bold"), local("Roboto-Bold");
+  font-family: "Courier Prime Fallback";
+  src: local("Courier New Bold"), local("CourierNewPS-BoldMT"), local("Courier Bold"), local("Courier-Bold");
   font-weight: 600 700;
-  size-adjust: 102%;
-  ascent-override: 90.2%;
-  descent-override: 27.5%;
+  size-adjust: 100%;
+  ascent-override: 78.1%;
+  descent-override: 34.2%;
   line-gap-override: 0%;
 }
 
@@ -79,9 +86,12 @@
   --color-accent-soft: rgb(79 114 130 / 0.35);
   --color-backdrop: rgb(17 17 17 / 0.4);
 
-  --font-sans: "Pixelify Sans", "Pixelify Sans Fallback", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Courier Prime", "Courier Prime Fallback", "Courier New", Courier, ui-monospace, monospace;
   --font-size-base: 1.0625rem;
   --font-size-small: 0.875rem;
+  /* Muted (grey) secondary text is set bold: Courier Prime's regular
+     strokes are thin, and thin grey reads weak. */
+  --font-weight-muted: 700;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -146,6 +156,7 @@ h1 {
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
 h2 {
@@ -217,6 +228,7 @@ input {
 
 .status {
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 /* Read by screen readers, not shown. */
@@ -306,12 +318,14 @@ input {
   font-size: 3rem;
   font-weight: 700;
   line-height: 1.1;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .score-caption {
   margin: 0 0 var(--space-1);
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 /* ---- Choice group (radio chips, js/ui.js `createChoiceGroup`) ---- */
@@ -434,6 +448,7 @@ input {
 .sheet-text {
   margin-bottom: var(--space-6);
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 .sheet-actions {
@@ -483,11 +498,13 @@ input {
   font-size: 3.5rem;
   font-weight: 700;
   line-height: 1;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
 .view-home .due-label {
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 /* Quiet "Backup" link under the actions; opens the backup sheet. */
