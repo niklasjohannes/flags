@@ -1,0 +1,5 @@
+/*
+ * Practice view (spec #5, owned by issue-5-practice-flow), including the
+ * round-end summary. Scope every rule under `.view-practice`. Base tokens and
+ * shared controls (`.button`, `.choice-group`) are in css/style.css.
+ */

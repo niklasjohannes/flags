@@ -21,3 +21,6 @@ npm-debug.log*
 
 # Scratch dir for untrusted vendor downloads (see docs/DATA.md)
 .vendor-tmp/
+
+# Scratch files for local sessions (never committed)
+.tmp/
