@@ -380,6 +380,12 @@ input {
   gap: var(--space-3);
 }
 
+/* Outcome of a sheet action (e.g. the backup's "Exported 42 flags."). */
+.sheet-status {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-6);
+  font-weight: 600;
+}
+
 @media (min-width: 40rem) {
   .sheet {
     max-width: 26rem;
@@ -420,6 +426,20 @@ input {
 
 .view-home .due-label {
   color: var(--color-text-muted);
+}
+
+/* Quiet "Backup" link under the actions; opens the backup sheet. */
+.view-home .home-footer {
+  display: flex;
+  justify-content: center;
+  margin: var(--space-2) 0 calc(-1 * var(--space-3));
+}
+
+.view-home .home-backup {
+  margin-left: 0;
+  font-size: var(--font-size-small);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 /* ---- Motion ---- */
