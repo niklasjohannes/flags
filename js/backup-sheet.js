@@ -9,8 +9,10 @@
 //
 // Export prefers the share sheet (`navigator.share` with a file): in an
 // installed iOS app that is the reliable way to "Save to Files"; a download
-// link there can open the file with no way back. Elsewhere it falls back to
-// a download link (`downloadFile`).
+// link there can open the file with no way back. Where sharing files is not
+// supported it uses a download link (`downloadFile`). If sharing is
+// supported but fails, it says so rather than trying a download that may
+// strand the user the same way.
 
 import { BACKUP_ERRORS, MAX_BACKUP_LENGTH, getBackupFilename, parseBackup, serializeBackup } from './backup.js';
 import { loadStates, localToday, saveStates } from './storage.js';
@@ -24,6 +26,7 @@ export const DOWNLOAD_URL_LIFETIME_MS = 60_000;
 const INTRO_TEXT = 'Progress is saved only on this device. Export it to a file to keep a copy, or import a file to restore it.';
 const READ_ERROR = 'This file could not be read.';
 const SAVE_ERROR = 'Could not save: this browser is blocking storage for the app.';
+const SHARE_ERROR = 'Could not share the backup. Try again.';
 
 function countFlags(count) {
   return `${count} ${count === 1 ? 'flag' : 'flags'}`;
@@ -160,26 +163,40 @@ export function createBackupSheet({ onRestored, signal } = {}) {
     });
   };
 
-  async function exportBackup() {
-    const today = localToday();
-    const states = loadStates(today);
-    const filename = getBackupFilename(today);
-    const file = new File([serializeBackup(states, new Date())], filename, { type: BACKUP_MIME_TYPE });
-    const done = `Exported ${countFlags(Object.keys(states).length)}.`;
-    if (canShareFile(file)) {
+  // One export at a time: a second tap while the share sheet is opening
+  // would reject with `InvalidStateError`.
+  let isExporting = false;
+  async function exportBackup(event) {
+    if (isExporting) {
+      return;
+    }
+    isExporting = true;
+    const exportButton = event.currentTarget;
+    exportButton.disabled = true;
+    try {
+      const today = localToday();
+      const states = loadStates(today);
+      const filename = getBackupFilename(today);
+      const file = new File([serializeBackup(states, new Date())], filename, { type: BACKUP_MIME_TYPE });
+      const done = `Exported ${countFlags(Object.keys(states).length)}.`;
+      if (!canShareFile(file)) {
+        downloadFile(file, filename);
+        setStatus(`${done} Saved as ${filename}.`);
+        return;
+      }
       try {
         await navigator.share({ files: [file], title: 'Flags backup' });
         setStatus(done);
-        return;
       } catch (error) {
-        if (error?.name === 'AbortError') {
-          return;
+        // AbortError: the user closed the share sheet; nothing to say.
+        if (error?.name !== 'AbortError') {
+          setStatus(SHARE_ERROR);
         }
-        // Any other share failure: fall back to a download.
       }
+    } finally {
+      isExporting = false;
+      exportButton.disabled = false;
     }
-    downloadFile(file, filename);
-    setStatus(`${done} Saved as ${filename}.`);
   }
 
   fileInput.addEventListener('change', async () => {

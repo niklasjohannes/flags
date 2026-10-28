@@ -10,7 +10,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 
-import { ICON_FILES, renderIcon } from '../scripts/build-icons.js';
+import { ICON_FILES, renderIcon, renderSvg } from '../scripts/build-icons.js';
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const MANIFEST = JSON.parse(readFileSync(join(REPO_ROOT, 'manifest.webmanifest'), 'utf8'));
@@ -111,6 +111,10 @@ describe('icons', () => {
       assert.equal(png.colorType, 6);
       assert.ok(Buffer.from(unfilter(png)).equals(Buffer.from(renderIcon(variant, size))), `icons/${file} is stale.`);
     }
+  });
+
+  it('has the favicon.svg the generator draws', () => {
+    assert.equal(readFileSync(join(REPO_ROOT, 'icons', 'favicon.svg'), 'utf8'), renderSvg('favicon'));
   });
 
   it('has nothing in icons/ that the generator does not write', () => {

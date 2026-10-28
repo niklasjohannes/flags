@@ -75,6 +75,12 @@
 // reloads to pick up the new JS, but only where nothing is lost: at once if
 // home is showing (and no sheet is open on it), otherwise the next time
 // anything navigates to home. A practice round or test is never interrupted.
+//
+// Browsers look for a new `sw.js` on navigation. An installed iOS app is
+// usually resumed from the background instead, with no navigation, so the
+// page also asks for an update check whenever it becomes visible again, at
+// most once per `UPDATE_CHECK_INTERVAL_MS`. `updateViaCache: 'none'` keeps
+// the HTTP cache out of that check.
 
 import * as home from './views/home.js';
 import * as practice from './views/practice.js';
@@ -85,6 +91,9 @@ import { el } from './ui.js';
 const DATA_URL = './data/countries.json';
 
 const VIEWS = Object.freeze({ home, practice, test, results });
+
+/** Least time (ms) between two update checks on resume. */
+export const UPDATE_CHECK_INTERVAL_MS = 15 * 60_000;
 
 let countries = null;
 let current = null;
@@ -234,7 +243,19 @@ function registerServiceWorker() {
       reloadIfSafe();
     }
   }, { capture: true });
-  navigator.serviceWorker.register('./sw.js').catch((error) => {
+  // Registering checks for an update itself, so the clock starts now.
+  let lastCheckAt = Date.now();
+  navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).then((registration) => {
+    document.addEventListener('visibilitychange', () => {
+      const isDue = Date.now() - lastCheckAt >= UPDATE_CHECK_INTERVAL_MS;
+      if (document.visibilityState !== 'visible' || !isDue || navigator.onLine === false) {
+        return;
+      }
+      lastCheckAt = Date.now();
+      // Fails when offline or the server is down; the next resume retries.
+      registration.update().catch(() => {});
+    });
+  }, (error) => {
     // The app still works online without it.
     console.warn('Service worker registration failed; offline use is unavailable.', error);
   });

@@ -5,6 +5,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, dirname, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +15,7 @@ import {
   BLOCK_END,
   BLOCK_START,
   buildFromRepo,
+  hashFile,
   hashFiles,
   renderBlock,
   replaceBlock
@@ -42,14 +44,14 @@ function readBlock(source) {
 
 function parseBlock(block) {
   const version = block.match(/^const CACHE_VERSION = '([0-9a-f]+)';$/m)?.[1];
-  const list = block.match(/^const PRECACHE_PATHS = \[\n([\s\S]*?)\n\];$/m)?.[1];
+  const list = block.match(/^const PRECACHE_FILES = \[\n([\s\S]*?)\n\];$/m)?.[1];
   assert.ok(version !== undefined && list !== undefined, 'The generated block is malformed.');
-  const paths = list.split(',\n').map((line) => {
-    const match = line.match(/^ {2}'\.\/([^']+)'$/);
-    assert.ok(match !== null, `Unexpected line in \`PRECACHE_PATHS\`: ${line}`);
-    return match[1];
+  const files = list.split(',\n').map((line) => {
+    const match = line.match(/^ {2}\['\.\/([^']+)', '([0-9a-f]{64})'\]$/);
+    assert.ok(match !== null, `Unexpected line in \`PRECACHE_FILES\`: ${line}`);
+    return { path: match[1], sha256: match[2] };
   });
-  return { version, paths };
+  return { version, files, paths: files.map(({ path }) => path) };
 }
 
 function walk(relativeDir) {
@@ -74,7 +76,24 @@ describe('sw.js', () => {
 
   it('is registered from js/app.js as `./sw.js`', () => {
     const app = readFileSync(join(REPO_ROOT, 'js', 'app.js'), 'utf8');
-    assert.match(app, /navigator\.serviceWorker\.register\('\.\/sw\.js'\)/);
+    assert.match(app, /navigator\.serviceWorker\.register\('\.\/sw\.js', \{ updateViaCache: 'none' \}\)/);
+    // Resumed installed apps do not navigate, so the page checks itself.
+    assert.match(app, /registration\.update\(\)/);
+  });
+
+  it('precaches cache-busted, hash-checked copies under the clean URL', () => {
+    assert.match(SW_SOURCE, /searchParams\.set\('v', CACHE_VERSION\)/);
+    assert.match(SW_SOURCE, /fetch\(busted\.href, \{ cache: 'reload' \}\)/);
+    assert.match(SW_SOURCE, /crypto\.subtle\.digest\('SHA-256', body\)/);
+    assert.match(SW_SOURCE, /if \(digest !== sha256\) \{\n\s+throw /);
+    assert.match(SW_SOURCE, /cache\.put\(url\.href, /);
+  });
+
+  it('reads only its own cache in the fetch path (never `caches.open` there)', () => {
+    const respond = SW_SOURCE.slice(SW_SOURCE.indexOf('async function respond('), SW_SOURCE.indexOf("self.addEventListener('install'"));
+    assert.doesNotMatch(respond, /caches\.open/);
+    assert.equal(respond.match(/caches\.match\(/g)?.length, 4);
+    assert.equal(respond.match(/options/g)?.length, 5);
   });
 
   it('only caches ok, basic, non-redirected responses', () => {
@@ -88,9 +107,16 @@ describe('sw.js', () => {
 describe('precache list', () => {
   it('matches a fresh build (run `node scripts/build-sw.js` if not)', () => {
     const fresh = buildFromRepo(REPO_ROOT);
-    assert.deepEqual(committed.paths, fresh.paths, 'The precache list is stale.');
+    assert.deepEqual(committed.files, fresh.files, 'The precache list (or a file hash) is stale.');
     assert.equal(committed.version, fresh.version, 'CACHE_VERSION does not match the files\' content hash.');
     assert.equal(readBlock(SW_SOURCE), fresh.block);
+  });
+
+  it('records each file\'s SHA-256', () => {
+    for (const { path, sha256 } of committed.files) {
+      const actual = createHash('sha256').update(readFileSync(join(REPO_ROOT, path))).digest('hex');
+      assert.equal(sha256, actual, `The hash of \`${path}\` is stale.`);
+    }
   });
 
   it('lists only files that exist, each once', () => {
@@ -164,18 +190,30 @@ describe('hashFiles', () => {
   });
 });
 
+describe('hashFile', () => {
+  it('is the hex SHA-256 of the bytes', () => {
+    assert.equal(hashFile(Buffer.from('')), 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+    assert.throws(() => hashFile('text'), TypeError);
+  });
+});
+
 describe('renderBlock / replaceBlock', () => {
+  const SHA = 'a'.repeat(64);
+
   it('round-trips through replaceBlock', () => {
-    const block = renderBlock('abc123', ['index.html', 'js/app.js']);
+    const files = [{ path: 'index.html', sha256: SHA }, { path: 'js/app.js', sha256: 'b'.repeat(64) }];
+    const block = renderBlock('abc123', files);
     const source = `head\n${BLOCK_START}\nold\n${BLOCK_END}\ntail\n`;
     assert.equal(replaceBlock(source, block), `head\n${block}\ntail\n`);
-    assert.deepEqual(parseBlock(block), { version: 'abc123', paths: ['index.html', 'js/app.js'] });
+    assert.deepEqual(parseBlock(block), { version: 'abc123', files, paths: ['index.html', 'js/app.js'] });
   });
 
-  it('refuses paths that could escape the app or break the quoting', () => {
-    assert.throws(() => renderBlock('abc', ['../secret']), RangeError);
-    assert.throws(() => renderBlock('abc', ["it's.js"]), RangeError);
-    assert.throws(() => renderBlock('ABC', ['a.js']), TypeError);
+  it('refuses paths that could escape the app or break the quoting, and bad hashes', () => {
+    assert.throws(() => renderBlock('abc', [{ path: '../secret', sha256: SHA }]), RangeError);
+    assert.throws(() => renderBlock('abc', [{ path: "it's.js", sha256: SHA }]), RangeError);
+    assert.throws(() => renderBlock('abc', [{ path: 'a.js', sha256: 'abc' }]), TypeError);
+    assert.throws(() => renderBlock('abc', ['a.js']), RangeError);
+    assert.throws(() => renderBlock('ABC', [{ path: 'a.js', sha256: SHA }]), TypeError);
   });
 
   it('requires exactly one block', () => {
