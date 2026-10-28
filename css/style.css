@@ -12,7 +12,55 @@
  * "you got it right" and focus rings. A miss is black/grey with an icon and
  * an outline. No red/green anywhere. Contrast against white: text 18.9:1,
  * muted text 5.7:1, accent 5.2:1.
+ *
+ * Pixel look (GitHub #24): all UI text is set in Pixelify Sans, corners are
+ * square, buttons cast a hard offset shadow, and the right/wrong marks are
+ * pixel drawings (img/mark-*.svg, since the font has no check or cross).
+ * Flags keep their own look: no rule here touches the flag images.
  */
+
+/* ---- Fonts ---- */
+
+/*
+ * Pixelify Sans 1.000 (fonts/, SIL OFL 1.1, see THIRD_PARTY_NOTICES.md):
+ * one variable file covering weights 400-700. `swap` shows the fallback
+ * until it arrives, which only happens on a first visit: index.html
+ * preloads it and sw.js precaches it.
+ *
+ * The fallback face is a local Arial (or Helvetica / Roboto) resized to
+ * Pixelify's metrics, so the swap barely rewraps or moves the text:
+ * `size-adjust` is Pixelify's width over Arial's across every country name
+ * and UI label (1.06 regular, 1.02 bold), and the overrides are Pixelify's
+ * ascent (0.92 em) and descent (0.28 em) divided by it, since `size-adjust`
+ * scales them too.
+ */
+@font-face {
+  font-family: "Pixelify Sans";
+  src: url("../fonts/PixelifySans-wght.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pixelify Sans Fallback";
+  src: local("Arial"), local("ArialMT"), local("Helvetica"), local("Roboto");
+  font-weight: 400 500;
+  size-adjust: 106%;
+  ascent-override: 86.8%;
+  descent-override: 26.4%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Pixelify Sans Fallback";
+  src: local("Arial Bold"), local("Arial-BoldMT"), local("Helvetica Bold"), local("Helvetica-Bold"), local("Roboto Bold"), local("Roboto-Bold");
+  font-weight: 600 700;
+  size-adjust: 102%;
+  ascent-override: 90.2%;
+  descent-override: 27.5%;
+  line-gap-override: 0%;
+}
 
 /* ---- Tokens ---- */
 
@@ -31,7 +79,7 @@
   --color-accent-soft: rgb(79 114 130 / 0.35);
   --color-backdrop: rgb(17 17 17 / 0.4);
 
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Pixelify Sans", "Pixelify Sans Fallback", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-size-base: 1.0625rem;
   --font-size-small: 0.875rem;
 
@@ -43,8 +91,13 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  --radius: 0.75rem;
+  /* Square corners for the pixel look. `--radius-small` frames the flags,
+     which keep their usual look. */
+  --radius: 0;
   --radius-small: 0.375rem;
+  /* Hard, unblurred offset shadow under buttons and sheets. */
+  --pixel-offset: 0.25rem;
+  --pixel-shadow: var(--pixel-offset) var(--pixel-offset) 0 var(--color-text);
   /* 48 px, above the 44 px minimum tap target. */
   --tap-min: 3rem;
   --content-max: 32rem;
@@ -52,6 +105,8 @@
 
   --focus-ring: 3px solid var(--color-accent);
   --pulse-duration: 700ms;
+  /* Animations move in a few hard steps, like a sprite. */
+  --pixel-steps: steps(4, end);
 }
 
 /* ---- Reset ---- */
@@ -91,7 +146,6 @@ h1 {
   font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.2;
-  letter-spacing: -0.01em;
 }
 
 h2 {
@@ -187,14 +241,22 @@ input {
   padding: var(--space-3) var(--space-4);
   border: 2px solid var(--color-text);
   border-radius: var(--radius);
+  box-shadow: var(--pixel-shadow);
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 80ms ease-out;
+  transition: transform 80ms steps(1, end), box-shadow 80ms steps(1, end);
 }
 
+/* Pressed: the button drops into its shadow, like a pixel-art key. */
 .button:active {
-  transform: scale(0.98);
+  transform: translate(var(--pixel-offset), var(--pixel-offset));
+  box-shadow: 0 0 0 var(--color-text);
+}
+
+/* The focus ring clears the shadow instead of cutting through it. */
+.button:focus-visible {
+  outline-offset: calc(var(--pixel-offset) + 2px);
 }
 
 .button-primary {
@@ -244,7 +306,6 @@ input {
   font-size: 3rem;
   font-weight: 700;
   line-height: 1.1;
-  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
@@ -300,7 +361,7 @@ input {
   min-height: var(--tap-min);
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--color-bg);
   white-space: nowrap;
   cursor: pointer;
@@ -325,7 +386,7 @@ input {
   gap: 0;
   padding: 3px;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--color-surface);
 }
 
@@ -343,10 +404,10 @@ input {
   margin: auto auto 0;
   padding: 0;
   border: 0;
+  border-top: 2px solid var(--color-text);
   border-radius: var(--radius) var(--radius) 0 0;
   background: var(--color-bg);
   color: var(--color-text);
-  box-shadow: 0 -0.25rem 1.5rem rgb(17 17 17 / 0.12);
 }
 
 .sheet::backdrop {
@@ -354,7 +415,7 @@ input {
 }
 
 .sheet[open] {
-  animation: sheet-in 180ms ease-out;
+  animation: sheet-in 180ms steps(3, end);
 }
 
 .sheet-body {
@@ -390,7 +451,9 @@ input {
   .sheet {
     max-width: 26rem;
     margin: auto;
+    border: 2px solid var(--color-text);
     border-radius: var(--radius);
+    box-shadow: calc(2 * var(--pixel-offset)) calc(2 * var(--pixel-offset)) 0 var(--color-text);
   }
 }
 
@@ -420,7 +483,6 @@ input {
   font-size: 3.5rem;
   font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 

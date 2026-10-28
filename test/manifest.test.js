@@ -156,6 +156,22 @@ describe('index.html head', () => {
     assert.equal(`${width}x${height}`, '180x180');
   });
 
+  it('preloads exactly the font files css/style.css loads (GitHub #24)', () => {
+    const css = readFileSync(join(REPO_ROOT, 'css', 'style.css'), 'utf8');
+    const fontUrls = [...css.matchAll(/url\("\.\.\/(fonts\/[^"]+)"\)/g)].map(([, path]) => `./${path}`);
+    const preloads = headElements().filter(({ tag, attrs }) => tag === 'link' && attrs.rel === 'preload');
+    assert.deepEqual(preloads.map(({ attrs }) => attrs.href), fontUrls);
+    for (const { attrs } of preloads) {
+      assert.equal(attrs.as, 'font');
+      assert.equal(attrs.type, 'font/woff2');
+    }
+    // Fonts are fetched in CORS mode, so a preload without `crossorigin` is
+    // never used and the font downloads twice.
+    for (const [tag] of HEAD.matchAll(/<link\b[^>]*\brel="preload"[^>]*>/g)) {
+      assert.match(tag, /\scrossorigin[\s>]/, `\`${tag}\` needs \`crossorigin\`.`);
+    }
+  });
+
   it('has the iOS and theme meta tags', () => {
     const meta = (name) => findHead('meta', (attrs) => attrs.name === name)?.attrs.content;
     assert.equal(meta('apple-mobile-web-app-capable'), 'yes');

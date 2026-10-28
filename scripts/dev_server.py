@@ -59,7 +59,9 @@ class NoStoreHandler(SimpleHTTPRequestHandler):
         '.js': 'text/javascript',
         '.json': 'application/json',
         '.svg': 'image/svg+xml',
+        '.txt': 'text/plain',
         '.webmanifest': 'application/manifest+json',
+        '.woff2': 'font/woff2',
     }
 
     def __init__(self, *args, base: str = DEFAULT_BASE, use_gzip: bool = False, **kwargs) -> None:

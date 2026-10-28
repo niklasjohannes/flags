@@ -27,7 +27,7 @@ const SW_SOURCE = readFileSync(join(REPO_ROOT, 'sw.js'), 'utf8');
 // Written out here rather than taken from scripts/build-sw.js, so the test
 // does not just repeat the generator's own rules.
 const REQUIRED_FILES = Object.freeze(['index.html', 'manifest.webmanifest']);
-const REQUIRED_DIRS = Object.freeze(['css', 'data', 'flags', 'icons', 'js']);
+const REQUIRED_DIRS = Object.freeze(['css', 'data', 'flags', 'fonts', 'icons', 'img', 'js']);
 const FORBIDDEN_PREFIXES = Object.freeze([
   'test/', 'test-support/', 'scripts/', 'vendor/', 'docs/', '.claude/', '.github/', '.git/', '.tmp/',
   '.vendor-tmp/', 'node_modules/'

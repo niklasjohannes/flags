@@ -7,3 +7,6 @@
 *.js text eol=lf
 *.md text eol=lf
 *.png binary
+# Vendored fonts and their license stay byte-identical to upstream (the
+# OFL.txt has CRLF endings; THIRD_PARTY_NOTICES.md records its SHA-256).
+fonts/* -text

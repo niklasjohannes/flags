@@ -25,14 +25,22 @@
   color: var(--color-accent);
 }
 
-.view-practice .is-correct-feedback::before {
-  content: "\2713\00a0";
-  content: "\2713\00a0" / "";
+/* Pixel check / cross before the verdict (see css/question.css). */
+.view-practice .is-correct-feedback::before,
+.view-practice .is-wrong-feedback::before {
+  content: "";
+  display: inline-block;
+  width: 0.875em;
+  height: 0.875em;
+  margin-right: 0.375em;
+  background: currentColor;
+  -webkit-mask: url("../img/mark-check.svg") center / contain no-repeat;
+  mask: url("../img/mark-check.svg") center / contain no-repeat;
 }
 
 .view-practice .is-wrong-feedback::before {
-  content: "\2715\00a0";
-  content: "\2715\00a0" / "";
+  -webkit-mask-image: url("../img/mark-cross.svg");
+  mask-image: url("../img/mark-cross.svg");
 }
 
 /* Next sits at the bottom, in thumb reach; the area keeps its place. */
