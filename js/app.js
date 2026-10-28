@@ -66,6 +66,15 @@
 // orchestrator): `js/question.js` + `css/question.css` (question UI),
 // `js/storage.js` (localStorage, `localToday`) and `js/ui.js` (DOM helpers,
 // `renderFlag`, labels). Scope view CSS under `.view-<name>`.
+//
+// ---- Service worker (spec #8) ----
+//
+// `sw.js` precaches the whole app and calls `skipWaiting()`, so a new deploy
+// takes over an open page at once (`controllerchange`). This page's JS is
+// then the old version while assets come from the new cache. The page
+// reloads to pick up the new JS, but only where nothing is lost: at once if
+// home is showing (and no sheet is open on it), otherwise the next time
+// anything navigates to home. A practice round or test is never interrupted.
 
 import * as home from './views/home.js';
 import * as practice from './views/practice.js';
@@ -80,6 +89,9 @@ const VIEWS = Object.freeze({ home, practice, test, results });
 let countries = null;
 let current = null;
 let isTransitioning = false;
+// Set when a new service worker took over; see "Service worker" above.
+let isReloadPending = false;
+let isReloading = false;
 
 function deepFreeze(value) {
   if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
@@ -140,6 +152,10 @@ function navigate(name, params = {}) {
     queueMicrotask(() => navigate(name, params));
     return;
   }
+  if (name === 'home' && isReloadPending) {
+    reload();
+    return;
+  }
   isTransitioning = true;
   try {
     transition(name, params);
@@ -160,7 +176,7 @@ function transition(name, params) {
     previous.container.hidden = true;
   }
   const container = getContainer(name);
-  current = { view: VIEWS[name], container };
+  current = { name, view: VIEWS[name], container };
   container.hidden = false;
   window.scrollTo(0, 0);
   try {
@@ -179,6 +195,51 @@ function transition(name, params) {
   }
 }
 
+// ---- Service worker ----
+
+function reload() {
+  if (!isReloading) {
+    isReloading = true;
+    location.reload();
+  }
+}
+
+function reloadIfSafe() {
+  const isOnHome = current !== null && current.name === 'home' &&
+    current.container.querySelector('dialog[open]') === null;
+  if (isOnHome) {
+    reload();
+  }
+}
+
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) {
+    return;
+  }
+  // The first worker claiming a page that had none (first visit) is not an
+  // update: nothing to reload.
+  let hadController = navigator.serviceWorker.controller !== null;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController) {
+      hadController = true;
+      return;
+    }
+    isReloadPending = true;
+    reloadIfSafe();
+  });
+  // A sheet open on home deferred the reload: retry when it closes. `close`
+  // does not bubble, so listen in the capture phase.
+  document.addEventListener('close', () => {
+    if (isReloadPending) {
+      reloadIfSafe();
+    }
+  }, { capture: true });
+  navigator.serviceWorker.register('./sw.js').catch((error) => {
+    // The app still works online without it.
+    console.warn('Service worker registration failed; offline use is unavailable.', error);
+  });
+}
+
 async function start() {
   try {
     countries = await loadCountries();
@@ -190,3 +251,10 @@ async function start() {
 }
 
 start();
+
+// After the page has loaded, so precaching does not compete with first paint.
+if (document.readyState === 'complete') {
+  registerServiceWorker();
+} else {
+  window.addEventListener('load', registerServiceWorker, { once: true });
+}

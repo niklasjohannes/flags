@@ -1,6 +1,9 @@
 // Home screen (spec #4, PLAN decisions 1-2): continent filter, quiz mode,
-// the number of flags waiting, Start and Test. Nothing else.
+// the number of flags waiting, Start and Test. Nothing else, apart from the
+// quiet "Backup" link in the footer (spec #8, owner decision on GitHub #9),
+// which opens js/backup-sheet.js.
 
+import { createBackupSheet } from '../backup-sheet.js';
 import { REGIONS, countDue } from '../srs.js';
 import { loadMode, loadStates, localToday, saveMode } from '../storage.js';
 import { ALL_REGIONS_LABEL, MODE_LABELS, REGION_LABELS, createChoiceGroup, el } from '../ui.js';
@@ -137,13 +140,25 @@ export function mount(container, context) {
   startButton.addEventListener('click', () => navigate('practice', { region: selectedRegion, mode: selectedMode }), { signal });
   testButton.addEventListener('click', () => navigate('test', { region: selectedRegion, mode: selectedMode }), { signal });
 
+  // A restore re-renders home, so the count reflects the imported progress.
+  const backupSheet = createBackupSheet({ onRestored: () => navigate('home'), signal });
+  const backupButton = el('button', {
+    type: 'button',
+    class: 'button-quiet home-backup',
+    'aria-haspopup': 'dialog',
+    'data-action': 'backup'
+  }, ['Backup']);
+  backupButton.addEventListener('click', backupSheet.open, { signal });
+
   updateCount();
   container.replaceChildren(
     el('h1', { class: 'home-title' }, ['Flags']),
     regionGroup,
     modeGroup,
     el('p', { class: 'due-count', 'aria-live': 'polite' }, [countNumber, ' ', countLabel]),
-    el('div', { class: 'view-actions home-actions' }, [startButton, testButton])
+    el('div', { class: 'view-actions home-actions' }, [startButton, testButton]),
+    el('div', { class: 'home-footer' }, [backupButton]),
+    backupSheet.dialog
   );
 }
 
