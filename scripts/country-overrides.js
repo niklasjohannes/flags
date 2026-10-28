@@ -49,7 +49,7 @@ export const POLICY = {
   },
   sovereignty: '`sovereign` is true iff the entry is a UN member state or a UN non-member observer state (ps, va). Everything else is false. No judgement about recognition is made beyond that rule.',
   parentCode: '`parentCode` is the lowercase code of the single UN-member state that de facto administers a dependency/territory (for Cook Islands and Niue: the state it is in free association with). It is null for sovereign entries and for entries whose own status is disputed with no single administering state (tw, eh). A sovereignty claim by another state does not change `parentCode` (see `contested`).',
-  naming: '`name` is the common English short name, without political qualifiers, with diacritics kept (e.g. Côte d\'Ivoire, Türkiye). `aliases` are former, long-form or colloquial English names used only for typing-mode search; they are not endorsements. Former names are kept as aliases (Burma, Swaziland, Macedonia, Ceylon, Cape Verde, Czech Republic). An alias that is the shared bare name of two entries ("Korea" for kp/kr, "Congo" for cd/cg) is not given to either, so neither side is favoured; name matching still finds both.',
+  naming: '`name` is the common English short name, without political qualifiers, with diacritics kept (e.g. Côte d\'Ivoire, Türkiye). `aliases` are former, long-form or colloquial English names used only for typing-mode search; they are not endorsements. Former names are kept as aliases (Burma, Swaziland, Macedonia, Ceylon, Cape Verde, Czech Republic). The United Kingdom also has its four constituent countries (England, Scotland, Wales, Northern Ireland) as aliases, since their own flags are out of scope. An alias that is the shared bare name of two entries ("Korea" for kp/kr, "Congo" for cd/cg) is not given to either, so neither side is favoured; name matching still finds both.',
   contested: {
     tw: 'Taiwan: not a UN member or observer -> sovereign false. Status disputed, no single administering UN-member state -> parentCode null. Name "Taiwan" with no aliases.',
     eh: 'Western Sahara: non-self-governing territory; administration divided between Morocco and the Sahrawi Republic -> sovereign false, parentCode null. Name "Western Sahara" with no aliases. Flag as shipped by flag-icons.',
@@ -196,7 +196,7 @@ export const ENTRIES = {
   fo: territory('Faroe Islands', EU, 'dk', ['Faroes']),
   fr: state('France', EU),
   ga: state('Gabon', AF),
-  gb: state('United Kingdom', EU, ['UK', 'Great Britain', 'Britain']),
+  gb: state('United Kingdom', EU, ['UK', 'Great Britain', 'Britain', 'England', 'Scotland', 'Wales', 'Northern Ireland']),
   gd: state('Grenada', NA),
   ge: state('Georgia', AS),
   gg: territory('Guernsey', EU, 'gb'),
