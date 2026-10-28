@@ -1,0 +1,96 @@
+/*
+ * Question UI (js/question.js), shared by practice (spec #5) and test (spec
+ * #6). Owned by spec #4; coordinate changes through the orchestrator. Views
+ * restyle it under `.view-practice .question` / `.view-test .question`.
+ * Monochrome first (PLAN decision 8): the accent marks the correct answer, a
+ * wrong pick is grey with a dashed outline. No red/green.
+ */
+
+.question {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.question-flag-frame {
+  display: flex;
+  justify-content: center;
+}
+
+.question-flag {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius) / 2);
+  background: var(--color-surface);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ---- Options (multiple choice) and suggestions (typing) ---- */
+
+.question-options,
+.question-suggestions {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.question-option,
+.question-suggestion {
+  display: block;
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.question-option:disabled,
+.question-suggestion:disabled {
+  cursor: default;
+}
+
+.is-chosen {
+  border-color: var(--color-text);
+}
+
+.is-correct {
+  border: 2px solid var(--color-accent);
+  font-weight: 600;
+}
+
+.is-wrong {
+  border: 2px dashed var(--color-text-muted);
+  color: var(--color-text-muted);
+}
+
+/* ---- Typing ---- */
+
+.question-typing {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.question-input {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-text);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  font-size: max(16px, 1rem); /* 16px+ stops iOS zooming on focus */
+}
+
+.question-answer {
+  margin: 0;
+  font-weight: 600;
+}

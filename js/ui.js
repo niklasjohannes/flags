@@ -1,8 +1,9 @@
 // Small DOM helpers shared by every view.
 //
 // DOM safety (docs/CONVENTIONS.md): nodes are built with `createElement`,
-// attributes and text nodes only. Nothing here parses HTML, and `el` refuses
-// inline event handlers and `style` attributes so the app stays CSP-ready.
+// attributes and text nodes only. Nothing here parses HTML. `el` only builds
+// allowlisted tags, refuses inline event handlers and `style` attributes (so
+// the app stays CSP-ready) and only accepts relative URLs.
 // Flags are only ever shown through `renderFlag` (an `<img>`), never inlined.
 
 import { REGIONS } from './srs.js';
@@ -29,35 +30,57 @@ export const MODE_LABELS = Object.freeze({
   typing: 'Typing'
 });
 
-const TAG_PATTERN = /^[a-z][a-z0-9-]*$/;
-const FORBIDDEN_TAGS = new Set(['script', 'style', 'iframe', 'object', 'embed']);
+// Tags the app builds. Extend deliberately (via the orchestrator); never add
+// script-capable ones (`script`, `style`, `iframe`, `object`, `embed`, `a`
+// with untrusted URLs, `svg`).
+const ALLOWED_TAGS = new Set([
+  'button', 'div', 'em', 'fieldset', 'h1', 'h2', 'h3', 'img', 'input',
+  'label', 'legend', 'li', 'ol', 'p', 'section', 'small', 'span', 'strong',
+  'ul'
+]);
 const FORBIDDEN_ATTRIBUTES = new Set(['style', 'srcdoc']);
+const URL_ATTRIBUTES = new Set(['href', 'src', 'action', 'formaction']);
 const FLAG_CODE_PATTERN = /^[a-z]{2}$/;
 
 function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+// A URL is safe if it is a relative path (`flags/fr.svg`, `./x`) or a
+// fragment (`#id`). Rejects any scheme (`javascript:`, `data:`, `https:`),
+// root-absolute and protocol-relative paths. Browsers ignore leading control
+// characters and spaces and strip tabs/newlines anywhere, so those are
+// removed before checking (`" java\tscript:"` is still `javascript:`).
+function isSafeUrl(value) {
+  const cleaned = value.replace(/^[\u0000-\u0020]+/, '').replace(/[\t\n\r]/g, '');
+  if (cleaned.startsWith('#')) {
+    return true;
+  }
+  return !/^[a-z][a-z0-9+.-]*:/i.test(cleaned) && !/^[/\\]/.test(cleaned);
+}
+
 /**
  * Build an element.
  *
- * @param {string} tag Lowercase tag name (`script`, `style`, `iframe`,
- *   `object` and `embed` are refused).
+ * Everything is validated before any node is created.
+ *
+ * @param {string} tag Tag name from the allowlist (`ALLOWED_TAGS`).
  * @param {Object<string, string | number | boolean | null | undefined>}
  *   [attrs={}] Attributes. `true` sets an empty (boolean) attribute;
  *   `false`, `null` and `undefined` skip it. `on*` and `style` are refused:
- *   use `addEventListener` and CSS classes.
+ *   use `addEventListener` and CSS classes. `href`, `src`, `action` and
+ *   `formaction` must be relative paths or `#fragment`s.
  * @param {Array<Node | string | number | null | undefined | false>}
  *   [children=[]] Child nodes. Strings and numbers become text nodes;
  *   `null`, `undefined` and `false` are skipped.
  * @returns {HTMLElement} The new element.
  */
 export function el(tag, attrs = {}, children = []) {
-  if (typeof tag !== 'string' || !TAG_PATTERN.test(tag)) {
-    throw new TypeError('`tag` must be a lowercase tag name.');
+  if (typeof tag !== 'string') {
+    throw new TypeError('`tag` must be a string.');
   }
-  if (FORBIDDEN_TAGS.has(tag)) {
-    throw new RangeError(`\`tag\` must not be \`${tag}\`.`);
+  if (!ALLOWED_TAGS.has(tag)) {
+    throw new RangeError(`\`tag\` \`${tag}\` is not on the allowlist.`);
   }
   if (!isPlainObject(attrs)) {
     throw new TypeError('`attrs` must be an object.');
@@ -65,7 +88,7 @@ export function el(tag, attrs = {}, children = []) {
   if (!Array.isArray(children)) {
     throw new TypeError('`children` must be an array.');
   }
-  const node = document.createElement(tag);
+  const attributes = [];
   for (const [name, value] of Object.entries(attrs)) {
     const lowerName = name.toLowerCase();
     if (lowerName.startsWith('on') || FORBIDDEN_ATTRIBUTES.has(lowerName)) {
@@ -74,20 +97,32 @@ export function el(tag, attrs = {}, children = []) {
     if (value === false || value === null || value === undefined) {
       continue;
     }
-    node.setAttribute(name, value === true ? '' : String(value));
+    const text = value === true ? '' : String(value);
+    if (URL_ATTRIBUTES.has(lowerName) && !isSafeUrl(text)) {
+      throw new RangeError(`\`attrs.${name}\` must be a relative path or a \`#fragment\`.`);
+    }
+    attributes.push([name, text]);
   }
   children.forEach((child, i) => {
-    if (child === null || child === undefined || child === false) {
-      return;
-    }
-    if (typeof child === 'string' || typeof child === 'number') {
-      node.append(document.createTextNode(String(child)));
-    } else if (child instanceof Node) {
-      node.append(child);
-    } else {
+    const isValid = child === null || child === undefined || child === false ||
+      typeof child === 'string' || typeof child === 'number' ||
+      (typeof Node !== 'undefined' && child instanceof Node);
+    if (!isValid) {
       throw new TypeError(`\`children[${i}]\` must be a Node, string or number.`);
     }
   });
+
+  const node = document.createElement(tag);
+  for (const [name, text] of attributes) {
+    node.setAttribute(name, text);
+  }
+  for (const child of children) {
+    if (typeof child === 'string' || typeof child === 'number') {
+      node.append(document.createTextNode(String(child)));
+    } else if (child !== null && child !== undefined && child !== false) {
+      node.append(child);
+    }
+  }
   return node;
 }
 

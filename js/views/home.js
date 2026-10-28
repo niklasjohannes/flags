@@ -19,8 +19,10 @@ const MODE_CHOICES = Object.freeze(
 
 // Module state lives for one page load: the filter survives a trip to
 // practice and back, but every reload starts at "All" because it is never
-// stored (PLAN decision 2).
+// stored (PLAN decision 2). The mode is also kept here, so it survives a trip
+// even when storage is blocked; it is loaded from storage on first mount.
 let selectedRegion = null;
+let selectedMode = null;
 let controller = null;
 
 /**
@@ -35,10 +37,30 @@ export function mount(container, context) {
   const { signal } = controller;
   const { countries, navigate } = context;
 
+  // iOS resumes an installed app from the background without reloading. Treat
+  // a resume on home like a fresh open: new `today`, filter back to All. This
+  // listener only exists while home is mounted, so a round or test in
+  // progress is never interrupted.
+  const reopen = () => {
+    selectedRegion = null;
+    unmount();
+    mount(container, context);
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      reopen();
+    }
+  }, { signal });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      reopen();
+    }
+  }, { signal });
+
   // Read once per visit, so the count reflects answers saved by practice.
   const today = localToday();
   const states = loadStates(today);
-  let mode = loadMode();
+  selectedMode ??= loadMode();
 
   const countNumber = el('span', { class: 'due-number' });
   const countLabel = el('span', { class: 'due-label' });
@@ -65,18 +87,18 @@ export function mount(container, context) {
     name: 'home-mode',
     legend: 'Mode',
     choices: MODE_CHOICES,
-    selected: mode,
+    selected: selectedMode,
     signal,
     onChange: (value) => {
-      mode = value;
-      saveMode(mode);
+      selectedMode = value;
+      saveMode(selectedMode);
     }
   });
 
   const startButton = el('button', { type: 'button', class: 'button button-primary' }, ['Start']);
   const testButton = el('button', { type: 'button', class: 'button button-secondary' }, ['Test']);
-  startButton.addEventListener('click', () => navigate('practice', { region: selectedRegion, mode }), { signal });
-  testButton.addEventListener('click', () => navigate('test', { region: selectedRegion, mode }), { signal });
+  startButton.addEventListener('click', () => navigate('practice', { region: selectedRegion, mode: selectedMode }), { signal });
+  testButton.addEventListener('click', () => navigate('test', { region: selectedRegion, mode: selectedMode }), { signal });
 
   updateCount();
   container.replaceChildren(
