@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { formatScore } from '../js/test-pass.js';
 import {
   answerCurrent,
   createRound,
@@ -81,7 +82,7 @@ describe('createRound', () => {
     assert.equal(isReask(round), false);
     assert.equal(isRoundComplete(round), false);
     assert.deepEqual(getProgress(round), { position: 1, total: 10 });
-    assert.deepEqual(getScore(round), { correct: 0, total: 10 });
+    assert.deepEqual(getScore(round), { correct: 0, total: 10, percent: 0 });
   });
 
   it('does not keep a reference to the input array', () => {
@@ -161,7 +162,7 @@ describe('answerCurrent', () => {
     assert.equal(isReask(round), true);
     round = answer(round, false);
     assert.equal(isRoundComplete(round), true);
-    assert.deepEqual(getScore(round), { correct: 1, total: 2 });
+    assert.deepEqual(getScore(round), { correct: 1, total: 2, percent: 50 });
   });
 
   it('does not modify the round it was given', () => {
@@ -185,7 +186,7 @@ describe('a full round', () => {
   it('asks each flag once when every answer is correct', () => {
     const { asked, round } = playRound(CODES, () => true);
     assert.deepEqual(asked, CODES);
-    assert.deepEqual(getScore(round), { correct: 10, total: 10 });
+    assert.deepEqual(getScore(round), { correct: 10, total: 10, percent: 100 });
   });
 
   it('asks every flag at least once, plus one re-ask per miss', () => {
@@ -202,12 +203,19 @@ describe('a full round', () => {
   it('scores first answers only, even when re-asks are correct', () => {
     const missed = new Set(['fr', 'it', 'pl']);
     const { round } = playRound(CODES, (code, reask) => reask || !missed.has(code));
-    assert.deepEqual(getScore(round), { correct: 7, total: 10 });
+    assert.deepEqual(getScore(round), { correct: 7, total: 10, percent: 70 });
   });
 
   it('scores 0 when every first answer is wrong, even if every re-ask is right', () => {
     const { round } = playRound(CODES, (code, reask) => reask);
-    assert.deepEqual(getScore(round), { correct: 0, total: 10 });
+    assert.deepEqual(getScore(round), { correct: 0, total: 10, percent: 0 });
+  });
+
+  it('rounds the percent down, and formats like test results', () => {
+    const { round } = playRound(['fr', 'de', 'it'], (code, reask) => reask || code !== 'it');
+    const score = getScore(round);
+    assert.deepEqual(score, { correct: 2, total: 3, percent: 66 });
+    assert.equal(formatScore(score), '2/3 · 66%');
   });
 
   it('reports one first answer per flag', () => {
@@ -335,7 +343,7 @@ describe('recordAnswer', () => {
         }
         round = result.round;
       }
-      assert.deepEqual(getScore(round), { correct: 2, total: 2 });
+      assert.deepEqual(getScore(round), { correct: 2, total: 2, percent: 100 });
     }
     assert.equal(saves, 2);
     assert.equal(states.fr.repetitions, 1);

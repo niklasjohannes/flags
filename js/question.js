@@ -10,17 +10,52 @@
 // The first answer calls `onAnswer(chosenCode)` exactly once and locks the
 // question. It shows no right/wrong feedback by itself: the caller decides.
 // Practice calls `reveal()` for feedback; test mode never does.
+//
+// Typing mode and the iOS keyboard: rendering the next typing question into
+// the same container keeps the same input element (cleared), and locking
+// makes it `readonly`, never `disabled`. So an input that has focus keeps it
+// from one question to the next, and the keyboard stays up even when the
+// next question comes from a timer (where iOS ignores `focus()`). Tapping a
+// suggestion does not move focus off the input either.
 
 import { buildChoices, filterSuggestions } from './quiz.js';
 import { QUIZ_MODES } from './storage.js';
 import { el, renderFlag } from './ui.js';
+
+// What each container showed last: the question's controller and, in typing
+// mode, the parts kept for the next question.
+const previousByContainer = new WeakMap();
+
+// End an IME composition still open in a typing question's input. Clearing
+// `value` alone does not: the IME keeps its buffer and types it back on the
+// next keystroke ("germ" + "a" → "germa" in the next question). A blur
+// commits the composition; the input is focused again straight away. Only
+// while composing, so the iOS keyboard is otherwise never touched.
+function endComposition(typing) {
+  if (!typing.isComposing) {
+    return;
+  }
+  const { input } = typing;
+  const hadFocus = document.activeElement === input;
+  input.blur();
+  typing.isComposing = false;
+  if (hadFocus) {
+    input.focus({ preventScroll: true });
+  }
+}
 
 function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
- * Render a question into `container`, replacing its contents.
+ * Render a question into `container`.
+ *
+ * The caller must own `container` exclusively: put nothing else in it. A
+ * first render replaces its contents. A typing question rendered after a
+ * typing question in the same container reuses the previous question's
+ * elements in place (to keep the input and its focus) and leaves any other
+ * children untouched.
  *
  * @param {HTMLElement} container Where to render.
  * @param {object} options
@@ -36,10 +71,13 @@ function isPlainObject(value) {
  *   aborted (pass the view's unmount signal).
  * @returns {{ reveal: () => void, focus: () => void, chosenCode: string | null }}
  *   Handle (frozen). `reveal()` shows the answer: marks the correct option
- *   (`.is-correct`) and a wrong pick (`.is-wrong`), shows the correct name in
- *   typing mode, sets the flag's `alt` to the name and locks the question.
- *   `focus()` focuses the first option or the text input. `chosenCode` is
- *   the answer given so far (`null` before it).
+ *   (`.is-correct`), a wrong pick (`.is-wrong`) and the question itself
+ *   (`.is-answered-correct` / `.is-answered-wrong`), shows the correct name
+ *   in typing mode (dropping the unmarked suggestions), sets the flag's
+ *   `alt` to the name and locks the question. `focus()` focuses the first
+ *   option or the text input.
+ *   `chosenCode` is the answer given so far (`null` before it). Once another
+ *   question is rendered into `container`, the old handle does nothing.
  */
 export function renderQuestion(container, options) {
   if (!(container instanceof HTMLElement)) {
@@ -69,6 +107,19 @@ export function renderQuestion(container, options) {
     throw new TypeError('`signal` must be an `AbortSignal`, or omitted.');
   }
 
+  // Abort the question this container showed before, so its handle goes
+  // inert and its listeners (on the reused input, too) are removed.
+  previousByContainer.get(container)?.controller.abort();
+  const controller = new AbortController();
+  if (signal !== undefined) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener('abort', () => controller.abort(), { signal: controller.signal });
+    }
+  }
+  const ownSignal = controller.signal;
+
   const names = new Map(countries.map((country) => [country.code, country.name]));
   let chosenCode = null;
   let isLocked = false;
@@ -87,35 +138,84 @@ export function renderQuestion(container, options) {
     const button = el('button', { type: 'button', class: className, 'data-code': optionCode }, [
       names.get(optionCode)
     ]);
-    button.addEventListener('click', () => answer(optionCode), { signal });
+    button.addEventListener('click', () => answer(optionCode), { signal: ownSignal });
+    if (className === 'question-suggestion') {
+      // Keep focus (and the iOS keyboard) in the input; `click` still fires.
+      button.addEventListener('mousedown', (event) => event.preventDefault(), { signal: ownSignal });
+    }
     buttons.set(optionCode, button);
     return button;
   };
 
-  let input = null;
-  let answerLine = null;
-  let body;
-  if (mode === 'mc') {
-    const choices = buildChoices({ code, countries, rng });
-    body = el('div', { class: 'question-options' }, choices.map(
-      (choice) => createOption(choice, 'question-option')
-    ));
+  // Typing mode keeps the previous question's root and input when it is still
+  // in `container`: replacing a focused input would close the iOS keyboard,
+  // and a timer-driven `focus()` (practice's auto-advance) cannot reopen it.
+  const previousTyping = previousByContainer.get(container)?.typing ?? null;
+  const reusable = mode === 'typing' && previousTyping !== null &&
+    previousTyping.root.parentNode === container;
+
+  let root;
+  let frame;
+  let typing = null;
+  if (reusable) {
+    typing = previousTyping;
+    ({ root, frame } = typing);
+    root.classList.remove('is-answered-correct', 'is-answered-wrong');
+    endComposition(typing);
+    typing.input.value = '';
+    typing.input.readOnly = false;
+    typing.list.replaceChildren();
+    typing.answerLine.textContent = '';
+    frame.replaceChildren(flag);
   } else {
-    input = el('input', {
-      class: 'question-input',
-      type: 'text',
-      'aria-label': 'Country name',
-      placeholder: 'Type a country…',
-      autocomplete: 'off',
-      autocorrect: 'off',
-      autocapitalize: 'none',
-      spellcheck: 'false',
-      enterkeyhint: 'done'
-    });
-    const list = el('ul', { class: 'question-suggestions', 'aria-label': 'Suggestions' });
-    // Empty until `reveal()`; a live region, so the name is announced. It stays
-    // in the layout (not `hidden`) so screen readers track it from the start.
-    answerLine = el('p', { class: 'question-answer', 'aria-live': 'polite' });
+    frame = el('div', { class: 'question-flag-frame' }, [flag]);
+    let body;
+    if (mode === 'mc') {
+      const choices = buildChoices({ code, countries, rng });
+      body = el('div', { class: 'question-options' }, choices.map(
+        (choice) => createOption(choice, 'question-option')
+      ));
+    } else {
+      const input = el('input', {
+        class: 'question-input',
+        type: 'text',
+        'aria-label': 'Country name',
+        placeholder: 'Type a country…',
+        autocomplete: 'off',
+        autocorrect: 'off',
+        autocapitalize: 'none',
+        spellcheck: 'false',
+        enterkeyhint: 'done'
+      });
+      const list = el('ul', { class: 'question-suggestions', 'aria-label': 'Suggestions' });
+      // Empty until `reveal()`; a live region, so the name is announced. It
+      // stays in the layout (not `hidden`) so screen readers track it from the
+      // start.
+      const answerLine = el('p', { class: 'question-answer', 'aria-live': 'polite' });
+      body = el('div', { class: 'question-typing' }, [input, list, answerLine]);
+      typing = { input, list, answerLine, isComposing: false };
+      // Tracked for the input's whole life (across questions), so a question
+      // can end a composition the previous one left open.
+      const state = typing;
+      input.addEventListener('compositionstart', () => {
+        state.isComposing = true;
+      }, { signal });
+      input.addEventListener('compositionend', () => {
+        state.isComposing = false;
+      }, { signal });
+    }
+    root = el('div', { class: 'question', 'data-mode': mode }, [frame, body]);
+    if (typing !== null) {
+      typing = Object.assign(typing, { root, frame });
+    }
+    container.replaceChildren(root);
+  }
+  previousByContainer.set(container, { controller, typing });
+
+  const input = typing?.input ?? null;
+  const answerLine = typing?.answerLine ?? null;
+  if (typing !== null) {
+    const { list } = typing;
     input.addEventListener('input', () => {
       if (isLocked) {
         return;
@@ -124,7 +224,7 @@ export function renderQuestion(container, options) {
       list.replaceChildren(...filterSuggestions(input.value, countries).map(
         (suggestion) => el('li', {}, [createOption(suggestion.code, 'question-suggestion')])
       ));
-    }, { signal });
+    }, { signal: ownSignal });
     // No raw-text answers: Enter does nothing. Except while an IME is
     // composing (Japanese, Chinese, ...), where Enter commits the composition;
     // Safari reports that as `keyCode` 229 rather than `isComposing`.
@@ -132,8 +232,7 @@ export function renderQuestion(container, options) {
       if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {
         event.preventDefault();
       }
-    }, { signal });
-    body = el('div', { class: 'question-typing' }, [input, list, answerLine]);
+    }, { signal: ownSignal });
   }
 
   function lock() {
@@ -141,16 +240,24 @@ export function renderQuestion(container, options) {
     for (const button of buttons.values()) {
       button.disabled = true;
     }
+    // `readonly`, not `disabled`: a disabled input loses focus, and with it
+    // the iOS keyboard.
     if (input !== null) {
-      input.disabled = true;
+      input.readOnly = true;
     }
   }
 
   function answer(optionCode) {
-    if (isLocked) {
+    if (isLocked || ownSignal.aborted) {
       return;
     }
     chosenCode = optionCode;
+    // Locked first, so the `input` event of the committed text cannot rebuild
+    // the suggestions. Inside the tap, so iOS allows the refocus.
+    isLocked = true;
+    if (typing !== null) {
+      endComposition(typing);
+    }
     lock();
     buttons.get(optionCode)?.classList.add('is-chosen');
     onAnswer(optionCode);
@@ -166,27 +273,37 @@ export function renderQuestion(container, options) {
   }
 
   function reveal() {
+    // A handle of a question that has been replaced does nothing.
+    if (ownSignal.aborted) {
+      return;
+    }
     lock();
     renderFlag(flag, code, { revealedName: target.name });
+    root.classList.add(chosenCode === code ? 'is-answered-correct' : 'is-answered-wrong');
     // Classes for the look, hidden text for screen readers.
     markOption(code, 'is-correct', ' (correct answer)');
     if (chosenCode !== null && chosenCode !== code) {
       markOption(chosenCode, 'is-wrong', ' (your answer)');
     }
-    if (answerLine !== null) {
+    if (typing !== null) {
+      // Keep only the marked rows, so the correct name sits right under the
+      // input instead of below a screenful of other suggestions.
+      for (const [optionCode, button] of buttons) {
+        if (optionCode !== code && optionCode !== chosenCode) {
+          button.closest('li')?.remove();
+        }
+      }
       answerLine.textContent = target.name;
     }
   }
 
   function focus() {
+    if (ownSignal.aborted) {
+      return;
+    }
     const first = input ?? buttons.values().next().value;
     first?.focus({ preventScroll: true });
   }
-
-  container.replaceChildren(el('div', { class: 'question', 'data-mode': mode }, [
-    el('div', { class: 'question-flag-frame' }, [flag]),
-    body
-  ]));
 
   return Object.freeze({
     reveal,

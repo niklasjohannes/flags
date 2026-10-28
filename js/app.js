@@ -48,6 +48,8 @@
 // feedback itself. The returned handle has `reveal()` (marks `.is-correct` /
 // `.is-wrong`, shows the name, sets the flag's `alt` to it), `focus()` and
 // `chosenCode`. Practice (#5) calls `reveal()`; test mode (#6) never does.
+// Render each next question into the same container: in typing mode that
+// keeps the same (focused) input, so the iOS keyboard stays up.
 //
 // ---- Ownership ----
 //
@@ -114,7 +116,7 @@ function showError(container, message, error) {
   container.replaceChildren(
     el('h1', {}, ['Something went wrong']),
     el('p', { class: 'status' }, [message]),
-    reloadButton
+    el('div', { class: 'view-actions' }, [reloadButton])
   );
 }
 

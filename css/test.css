@@ -1,8 +1,9 @@
 /*
- * Test and results views (spec #6, owned by issue-6-test-mode). Scope every
- * rule under `.view-test` or `.view-results`. Base tokens and shared controls
- * (`.button`, `.choice-group`) are in css/style.css. Minimal and monochrome;
- * the visual pass is spec #7.
+ * Test and results views (spec #6). Scope every rule under `.view-test` or
+ * `.view-results`. Tokens and shared pieces (`.button`, `.view-bar`,
+ * `.view-actions`, `.score`, `.sheet`) are in css/style.css; the question in
+ * css/question.css. Test mode shows no right/wrong feedback, so nothing here
+ * uses the accent.
  */
 
 /* ---- Test: scope picker ---- */
@@ -13,74 +14,29 @@
 }
 
 .view-test .test-mode {
-  margin: 0 0 var(--space-6);
+  margin: 0;
 }
 
 .view-test .test-mode-label {
+  margin-right: var(--space-1);
   color: var(--color-text-muted);
-  font-size: 0.875rem;
+  font-size: var(--font-size-small);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-.view-test .test-actions,
-.view-results .results-actions {
-  display: grid;
-  gap: var(--space-3);
-}
-
-/* ---- Test: blind pass ---- */
-
-.view-test .test-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
-.view-test .test-counter {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.view-test .test-exit {
-  min-height: var(--tap-min);
-  padding: 0 var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-bg);
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
 /* ---- Results ---- */
 
 .view-results .results-scope {
-  margin: 0;
+  margin: calc(-1 * var(--space-4)) 0 var(--space-8);
   color: var(--color-text-muted);
-}
-
-.view-results .results-score {
-  margin: var(--space-2) 0 var(--space-8);
-  font-size: 2.5rem;
-  font-weight: 700;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-
-.view-results .results-missed-title {
-  margin: 0 0 var(--space-3);
-  font-size: 1.125rem;
 }
 
 .view-results .results-list {
   display: grid;
   gap: var(--space-3);
-  margin: 0 0 var(--space-8);
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -88,16 +44,17 @@
 .view-results .results-miss {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .view-results .results-flag {
   flex: none;
-  width: 4rem;
-  height: 3rem;
+  width: 4.5rem;
+  height: auto;
+  aspect-ratio: 4 / 3;
   object-fit: contain;
   border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius) / 4);
+  border-radius: var(--radius-small);
   background: var(--color-surface);
 }
 
@@ -112,6 +69,15 @@
 }
 
 .view-results .results-none {
-  margin: 0 0 var(--space-8);
+  margin: 0;
   color: var(--color-text-muted);
+}
+
+/* A long miss list scrolls under the actions, which stay in thumb reach. */
+.view-results .results-actions {
+  position: sticky;
+  bottom: 0;
+  margin-bottom: calc(-1 * max(var(--gutter), env(safe-area-inset-bottom)));
+  padding-bottom: max(var(--gutter), env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, transparent, var(--color-bg) var(--space-6));
 }
