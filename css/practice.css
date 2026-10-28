@@ -1,45 +1,17 @@
 /*
- * Practice view (spec #5, owned by issue-5-practice-flow), including the
- * round-end summary. Scope every rule under `.view-practice`. Base tokens and
- * shared controls (`.button`, `.choice-group`) are in css/style.css.
- * Monochrome first (PLAN decision 8): the accent marks a correct answer, a
- * miss is plain text with a cross. No red/green.
+ * Practice view (spec #5), including the round-end summary. Scope every rule
+ * under `.view-practice`. Tokens and shared pieces (`.button`, `.view-bar`,
+ * `.view-actions`, `.score`) are in css/style.css; the question in
+ * css/question.css. Monochrome first (PLAN decision 8): the accent marks a
+ * correct answer, a miss is black text with a cross. No red/green.
  */
-
-/* ---- Header: exit + progress ---- */
-
-.view-practice .practice-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin-bottom: var(--space-4);
-}
-
-.view-practice .practice-exit {
-  min-height: var(--tap-min);
-  padding: 0 var(--space-3);
-  margin-left: calc(-1 * var(--space-3));
-  border: 0;
-  background: none;
-  color: var(--color-text-muted);
-  font-weight: 600;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.view-practice .practice-progress {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
 
 /* ---- Feedback ---- */
 
 .view-practice .practice-feedback {
   /* Reserve the line, so revealing feedback never shifts the layout. */
   min-height: 1.5em;
-  margin: var(--space-4) 0;
+  margin: var(--space-4) 0 0;
   font-weight: 600;
 }
 
@@ -57,15 +29,13 @@
   content: "\2715\00a0" / "";
 }
 
-/* ---- Round-end summary ---- */
-
-.view-practice .practice-score {
-  margin: var(--space-8) 0;
-  font-size: 2.5rem;
-  font-variant-numeric: tabular-nums;
+/* Next sits at the bottom, in thumb reach; the area keeps its place. */
+.view-practice .practice-next-area {
+  min-height: calc(3.25rem + var(--space-6));
 }
 
-.view-practice .practice-actions {
-  display: grid;
-  gap: var(--space-3);
+/* ---- Round-end summary ---- */
+
+.view-practice .practice-summary-title {
+  margin-bottom: var(--space-8);
 }

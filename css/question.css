@@ -1,15 +1,23 @@
 /*
  * Question UI (js/question.js), shared by practice (spec #5) and test (spec
- * #6). Owned by spec #4; coordinate changes through the orchestrator. Views
- * restyle it under `.view-practice .question` / `.view-test .question`.
- * Monochrome first (PLAN decision 8): the accent marks the correct answer, a
- * wrong pick is grey with a dashed outline. No red/green.
+ * #6). Views restyle it under `.view-practice .question` /
+ * `.view-test .question`.
+ *
+ * Feedback (PLAN decision 8), only after `reveal()` (practice):
+ *   - answered right (`.is-answered-correct`): the accent pulses once around
+ *     the flag and the chosen option, which keeps an accent outline and a
+ *     check. Reduced motion: the same, without the pulse.
+ *   - answered wrong (`.is-answered-wrong`): the pick gets a grey dashed
+ *     outline and a cross; the right answer a black outline and a check.
+ * No red/green, and the accent never marks a miss.
  */
 
 .question {
   display: grid;
-  gap: var(--space-6);
+  gap: var(--space-4);
 }
+
+/* ---- Flag: the dominant element ---- */
 
 .question-flag-frame {
   display: flex;
@@ -18,15 +26,23 @@
 
 .question-flag {
   width: 100%;
+  /* Keeps a few options visible on short (landscape, desktop) screens. */
+  max-width: calc(45dvh * 4 / 3);
   height: auto;
   aspect-ratio: 4 / 3;
   object-fit: contain;
+  /* A subtle frame, so white-heavy flags (Japan) stay visible on white. */
   border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius) / 2);
+  border-radius: var(--radius-small);
   background: var(--color-surface);
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
+}
+
+.is-answered-correct .question-flag {
+  border-color: var(--color-accent);
+  animation: question-pulse var(--pulse-duration) ease-out;
 }
 
 /* ---- Options (multiple choice) and suggestions (typing) ---- */
@@ -42,9 +58,12 @@
 
 .question-option,
 .question-suggestion {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   width: 100%;
-  min-height: var(--tap-min);
+  min-height: 3.25rem;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
@@ -56,21 +75,56 @@
 
 .question-option:disabled,
 .question-suggestion:disabled {
+  color: inherit;
   cursor: default;
 }
 
+.question-option:not(:disabled):active,
+.question-suggestion:not(:disabled):active {
+  background: var(--color-surface);
+}
+
+/* The pick, before (or without) feedback: test mode only ever shows this. */
 .is-chosen {
   border-color: var(--color-text);
 }
 
+/* Icons are decoration; the hidden text from `reveal()` is what is read. */
+.is-correct::after,
+.is-wrong::after {
+  flex: none;
+  font-weight: 700;
+}
+
 .is-correct {
-  border: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-text);
+  outline-offset: -2px;
   font-weight: 600;
 }
 
-.is-wrong {
-  border: 2px dashed var(--color-text-muted);
+.is-correct::after {
+  content: "\2713";
+  content: "\2713" / "";
+}
+
+.question .is-wrong {
+  border: 2px dashed var(--color-border-strong);
   color: var(--color-text-muted);
+}
+
+.is-wrong::after {
+  content: "\2715";
+  content: "\2715" / "";
+}
+
+.is-answered-correct .is-correct {
+  border-color: var(--color-accent);
+  outline-color: var(--color-accent);
+  animation: question-pulse var(--pulse-duration) ease-out;
+}
+
+.is-answered-correct .is-correct::after {
+  color: var(--color-accent);
 }
 
 /* ---- Typing ---- */
@@ -82,15 +136,54 @@
 
 .question-input {
   width: 100%;
-  min-height: var(--tap-min);
+  min-height: 3.25rem;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-text);
+  border: 2px solid var(--color-text);
   border-radius: var(--radius);
   background: var(--color-bg);
   font-size: max(16px, 1rem); /* 16px+ stops iOS zooming on focus */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.question-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+.question-input:focus-visible {
+  outline-offset: 0;
+}
+
+/* During reveal: still focused (keeps the iOS keyboard up), not editable. */
+.question-input:read-only {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
 }
 
 .question-answer {
   margin: 0;
   font-weight: 600;
+}
+
+.question-answer:not(:empty)::before {
+  content: "\2713\00a0";
+  content: "\2713\00a0" / "";
+}
+
+.is-answered-correct .question-answer::before {
+  color: var(--color-accent);
+}
+
+/* ---- Motion ---- */
+
+@keyframes question-pulse {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-accent-soft);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0.75rem transparent;
+  }
 }

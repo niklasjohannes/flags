@@ -29,6 +29,7 @@ import {
 import { renderQuestion } from '../question.js';
 import { ROUND_SIZE, pickRound } from '../srs.js';
 import { loadStates, localToday, saveStates } from '../storage.js';
+import { formatScore } from '../test-pass.js';
 import { el } from '../ui.js';
 
 /** Delay (ms) between revealing a correct answer and the next question. */
@@ -64,14 +65,15 @@ export function mount(container, context) {
   };
   signal.addEventListener('abort', clearAdvance);
 
-  const exitButton = el('button', { type: 'button', class: 'practice-exit' }, ['Exit']);
+  const exitButton = el('button', { type: 'button', class: 'button-quiet practice-exit' }, ['Exit']);
   exitButton.addEventListener('click', () => navigate('home'), { signal });
-  const progress = el('p', { class: 'practice-progress' });
-  const header = el('div', { class: 'practice-header' }, [exitButton, progress]);
+  const progress = el('p', { class: 'view-counter practice-progress' });
+  const header = el('div', { class: 'view-bar practice-header' }, [exitButton, progress]);
 
   const questionArea = el('div', { class: 'practice-question' });
   const feedback = el('p', { class: 'practice-feedback', 'aria-live': 'polite' });
   const nextButton = el('button', { type: 'button', class: 'button button-primary practice-next', hidden: true }, ['Next']);
+  const actions = el('div', { class: 'view-actions practice-next-area' }, [nextButton]);
 
   let round = null;
   let question = null;
@@ -88,15 +90,17 @@ export function mount(container, context) {
   }, { capture: true, signal });
 
   function showSummary() {
-    const { correct, total } = getScore(round);
+    const score = getScore(round);
     const keepGoingButton = el('button', { type: 'button', class: 'button button-primary', 'data-action': 'keep-going' }, ['Keep going']);
     const doneButton = el('button', { type: 'button', class: 'button button-secondary', 'data-action': 'done' }, ['Done']);
     keepGoingButton.addEventListener('click', startRound, { signal });
     doneButton.addEventListener('click', () => navigate('home'), { signal });
-    container.replaceChildren(el('div', { class: 'practice-summary' }, [
-      el('h1', { class: 'practice-score' }, [`${correct}/${total} correct`]),
-      el('div', { class: 'practice-actions' }, [keepGoingButton, doneButton])
-    ]));
+    container.replaceChildren(
+      el('h1', { class: 'practice-summary-title' }, ['Round complete']),
+      el('p', { class: 'score-caption' }, ['Correct']),
+      el('p', { class: 'score practice-score' }, [formatScore(score)]),
+      el('div', { class: 'view-actions practice-actions' }, [keepGoingButton, doneButton])
+    );
     keepGoingButton.focus({ preventScroll: true });
   }
 
@@ -154,7 +158,13 @@ export function mount(container, context) {
       feedback.textContent = 'Not quite';
       feedback.classList.add('is-wrong-feedback');
       nextButton.hidden = false;
+      // Focus Next. In typing mode that also closes the iOS keyboard, so the
+      // revealed name and Next are in view; tapping Next reopens it (focus
+      // from inside a tap is allowed). Correct answers keep the keyboard up.
       nextButton.focus({ preventScroll: true });
+      if (document.activeElement instanceof HTMLInputElement) {
+        document.activeElement.blur();
+      }
     }
   }
 
@@ -176,10 +186,13 @@ export function mount(container, context) {
       // Only possible if the region has no flags at all.
       const doneButton = el('button', { type: 'button', class: 'button button-secondary' }, ['Done']);
       doneButton.addEventListener('click', () => navigate('home'), { signal });
-      container.replaceChildren(el('p', { class: 'status' }, ['No flags to practise here.']), doneButton);
+      container.replaceChildren(
+        el('p', { class: 'status' }, ['No flags to practise here.']),
+        el('div', { class: 'view-actions' }, [doneButton])
+      );
       return;
     }
-    container.replaceChildren(header, questionArea, feedback, nextButton);
+    container.replaceChildren(header, questionArea, feedback, actions);
     showQuestion();
   }
 

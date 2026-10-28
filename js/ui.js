@@ -34,7 +34,7 @@ export const MODE_LABELS = Object.freeze({
 // script-capable ones (`script`, `style`, `iframe`, `object`, `embed`, `a`
 // with untrusted URLs, `svg`).
 const ALLOWED_TAGS = new Set([
-  'button', 'div', 'em', 'fieldset', 'h1', 'h2', 'h3', 'img', 'input',
+  'button', 'dialog', 'div', 'em', 'fieldset', 'h1', 'h2', 'h3', 'img', 'input',
   'label', 'legend', 'li', 'ol', 'p', 'section', 'small', 'span', 'strong',
   'ul'
 ]);
@@ -43,6 +43,7 @@ const ALLOWED_TAGS = new Set([
 const FORBIDDEN_ATTRIBUTES = new Set(['style', 'srcdoc', 'srcset']);
 const URL_ATTRIBUTES = new Set(['href', 'src', 'action', 'formaction']);
 const FLAG_CODE_PATTERN = /^[a-z]{2}$/;
+const CHOICE_GROUP_VARIANTS = Object.freeze(['chips', 'segmented']);
 
 function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -185,9 +186,11 @@ export function formatRegion(region) {
  * @param {(value: string) => void} options.onChange Called with the newly
  *   checked value.
  * @param {AbortSignal} [options.signal] Removes the listener when aborted.
+ * @param {string} [options.variant='chips'] `'chips'` (wrapping pills) or
+ *   `'segmented'` (one row of equal-width segments, for 2-3 short choices).
  * @returns {HTMLFieldSetElement} The group.
  */
-export function createChoiceGroup({ name, legend, choices, selected, onChange, signal } = {}) {
+export function createChoiceGroup({ name, legend, choices, selected, onChange, signal, variant = 'chips' } = {}) {
   if (typeof name !== 'string' || name === '') {
     throw new TypeError('`name` must be a non-empty string.');
   }
@@ -208,7 +211,11 @@ export function createChoiceGroup({ name, legend, choices, selected, onChange, s
   if (typeof onChange !== 'function') {
     throw new TypeError('`onChange` must be a function.');
   }
-  const group = el('fieldset', { class: 'choice-group' }, [
+  if (!CHOICE_GROUP_VARIANTS.includes(variant)) {
+    throw new RangeError(`\`variant\` must be one of ${CHOICE_GROUP_VARIANTS.join(', ')}.`);
+  }
+  const className = variant === 'segmented' ? 'choice-group choice-group-segmented' : 'choice-group';
+  const group = el('fieldset', { class: className }, [
     el('legend', { class: 'choice-group-legend' }, [legend]),
     el('div', { class: 'choice-group-options' }, choices.map((choice) => el('label', { class: 'choice' }, [
       el('input', {

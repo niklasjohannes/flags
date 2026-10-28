@@ -124,6 +124,7 @@ export function mount(container, context) {
     legend: 'Mode',
     choices: MODE_CHOICES,
     selected: selectedMode,
+    variant: 'segmented',
     signal,
     onChange: (value) => {
       selectedMode = value;
@@ -142,7 +143,7 @@ export function mount(container, context) {
     regionGroup,
     modeGroup,
     el('p', { class: 'due-count', 'aria-live': 'polite' }, [countNumber, ' ', countLabel]),
-    el('div', { class: 'home-actions' }, [startButton, testButton])
+    el('div', { class: 'view-actions home-actions' }, [startButton, testButton])
   );
 }
 
