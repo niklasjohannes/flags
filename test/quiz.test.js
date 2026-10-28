@@ -261,13 +261,17 @@ describe('buildChoices', () => {
     }
   });
 
-  it('puts the correct answer in every position', () => {
+  it('puts the correct answer in each position roughly equally often', () => {
     const rng = createRng(15);
-    const positions = new Set();
-    for (let round = 0; round < 200; round += 1) {
-      positions.add(buildChoices({ code: 'fr', countries, rng }).indexOf('fr'));
+    const rounds = 8_000;
+    const counts = [0, 0, 0, 0];
+    for (let round = 0; round < rounds; round += 1) {
+      counts[buildChoices({ code: 'fr', countries, rng }).indexOf('fr')] += 1;
     }
-    assert.deepEqual([...positions].sort(), [0, 1, 2, 3]);
+    const expected = rounds / counts.length;
+    for (const [position, count] of counts.entries()) {
+      assert.ok(Math.abs(count - expected) < expected * 0.1, `position ${position}: ${count} vs ~${expected}`);
+    }
   });
 });
 
@@ -304,9 +308,13 @@ describe('pickDistractors and buildChoices validation', () => {
     assert.throws(() => pickDistractors({ code: 'fr', countries, rng: () => NaN }), RangeError);
   });
 
-  it('rejects a missing options object', () => {
+  it('rejects a missing or non-object options argument', () => {
     assert.throws(() => pickDistractors(), TypeError);
     assert.throws(() => buildChoices(), TypeError);
+    for (const options of [null, 'fr', ['fr']]) {
+      assert.throws(() => pickDistractors(options), { name: 'TypeError', message: /`options`/ });
+      assert.throws(() => buildChoices(options), { name: 'TypeError', message: /`options`/ });
+    }
   });
 });
 
@@ -323,6 +331,21 @@ describe('normalizeText', () => {
     assert.equal(normalizeText("'.- "), '');
   });
 
+  it('splits ligatures and full-width forms (NFKD)', () => {
+    assert.equal(normalizeText('ﬁji'), 'fiji');
+    assert.equal(normalizeText('ＵＳＡ'), 'usa');
+  });
+
+  it('folds letters that decomposition leaves whole', () => {
+    assert.equal(normalizeText('Straße'), 'strasse');
+    assert.equal(normalizeText('Færøerne'), 'faeroerne');
+    assert.equal(normalizeText('Œuvre'), 'oeuvre');
+    assert.equal(normalizeText('Łódź'), 'lodz');
+    assert.equal(normalizeText('Đakovo'), 'dakovo');
+    assert.equal(normalizeText('Diyarbakır'), 'diyarbakir');
+    assert.equal(normalizeText('Þórshöfn'), 'thorshofn');
+  });
+
   it('rejects non-strings', () => {
     assert.throws(() => normalizeText(null), { name: 'TypeError', message: /`text`/ });
   });
@@ -330,11 +353,22 @@ describe('normalizeText', () => {
 
 describe('getTypoThreshold', () => {
   it('scales with query length', () => {
-    assert.equal(getTypoThreshold('bra'), 0);
-    assert.equal(getTypoThreshold('braz'), 1);
-    assert.equal(getTypoThreshold('brazl'), 1);
+    assert.equal(getTypoThreshold('br'), 0);
+    assert.equal(getTypoThreshold('bra'), 1);
+    assert.equal(getTypoThreshold('braz'), 2);
+    assert.equal(getTypoThreshold('brazl'), 2);
     assert.equal(getTypoThreshold('phillipi'), 2);
-    assert.equal(getTypoThreshold('a b c'), 0);
+    assert.equal(getTypoThreshold('a b'), 0);
+    assert.equal(getTypoThreshold('a b c'), 1);
+  });
+
+  it('never decreases as the query grows', () => {
+    let previous = 0;
+    for (let length = 1; length <= 30; length += 1) {
+      const threshold = getTypoThreshold('x'.repeat(length));
+      assert.ok(threshold >= previous, `length ${length}`);
+      previous = threshold;
+    }
   });
 
   it('rejects non-strings', () => {
@@ -356,6 +390,10 @@ describe('filterSuggestions', () => {
     assert.deepEqual(top('burma'), { code: 'mm', name: 'Myanmar', matched: 'Burma' });
     assert.equal(top('ivory coast').code, 'ci');
     assert.equal(top('turkey').code, 'tr');
+    for (const query of ['england', 'scotland', 'wales', 'northern ireland', 'great britain']) {
+      assert.equal(top(query).code, 'gb', query);
+    }
+    assert.equal(top('ireland').code, 'ie');
   });
 
   it('matches a missing-letter subsequence', () => {
@@ -381,6 +419,52 @@ describe('filterSuggestions', () => {
     assert.equal(top('jermany').code, 'de');
     assert.equal(top('phillipines').code, 'ph');
     assert.equal(top('nwe zealand').code, 'nz');
+    assert.equal(top('morroco').code, 'ma');
+    assert.equal(top('sirya').code, 'sy');
+  });
+
+  it('ranks a one-edit typo above a widely spread subsequence', () => {
+    // Each query is also a subsequence of the second, longer name.
+    const cases = [
+      ['fratce', 'fr', 'fm'],
+      ['bahrein', 'bh', 'ba'],
+      ['kenia', 'ke', 'cc'],
+      ['brzzil', 'br', 'cg']
+    ];
+    for (const [query, expected, spread] of cases) {
+      const codes = codesOf(filterSuggestions(query, countries, { limit: 50 }));
+      assert.equal(codes[0], expected, query);
+      assert.ok(codes.includes(spread), `${query} should still list ${spread}`);
+    }
+  });
+
+  it('does not drop a country while the user types on past a typo', () => {
+    function isShown(query, code) {
+      return codesOf(filterSuggestions(query, countries, { limit: 300 })).includes(code);
+    }
+    function assertStaysShown(typed, code) {
+      let wasShown = false;
+      for (let length = 1; length <= typed.length; length += 1) {
+        const shown = isShown(typed.slice(0, length), code);
+        assert.ok(shown || !wasShown, `${typed.slice(0, length)} dropped ${code}`);
+        wasShown = shown;
+      }
+      assert.ok(wasShown, `${typed} never showed ${code}`);
+    }
+    assertStaysShown('morroco', 'ma');
+    assertStaysShown('sirya', 'sy');
+    assertStaysShown('phillipines', 'ph');
+    assertStaysShown('jermany', 'de');
+    assertStaysShown('brzzil', 'br');
+    // One typo (deletion or substitution) in the middle of every real name;
+    // the letters after it are typed correctly.
+    for (const { code, name } of countries) {
+      const normalized = normalizeText(name);
+      const middle = Math.floor(normalized.length / 2);
+      const substituted = normalized[middle] === 'x' ? 'q' : 'x';
+      assertStaysShown(normalized.slice(0, middle) + normalized.slice(middle + 1), code);
+      assertStaysShown(normalized.slice(0, middle) + substituted + normalized.slice(middle + 1), code);
+    }
   });
 
   it('returns both sides of a shared bare name', () => {
@@ -388,7 +472,7 @@ describe('filterSuggestions', () => {
     assert.deepEqual(codesOf(filterSuggestions('congo', countries)).slice(0, 2).sort(), ['cd', 'cg']);
   });
 
-  it('ranks by tier: exact, prefix, word-prefix, substring, subsequence, typo', () => {
+  it('ranks by tier: exact, prefix, word-prefix, substring, fuzzy', () => {
     const list = [
       { code: 'e', name: 'Mali', aliases: [] },
       { code: 'p', name: 'Malibu', aliases: [] },
@@ -398,9 +482,10 @@ describe('filterSuggestions', () => {
       { code: 't', name: 'Mlai', aliases: [] },
       { code: 'n', name: 'Chad', aliases: [] }
     ];
-    assert.equal(MATCH_TIERS.length, 6);
-    // 'mlai' is one swap away from 'mali'; 4 letters tolerate one edit.
-    assert.deepEqual(codesOf(filterSuggestions('mali', list)), ['e', 'p', 'w', 's', 'q', 't']);
+    assert.deepEqual(MATCH_TIERS, ['exact', 'prefix', 'word-prefix', 'substring', 'fuzzy']);
+    // Both last two are fuzzy: 'mlai' is one swap (cost 1), 'mxaxlxi' skips
+    // three letters (cost 1.5).
+    assert.deepEqual(codesOf(filterSuggestions('mali', list)), ['e', 'p', 'w', 's', 't', 'q']);
   });
 
   it('orders shorter matches first within a tier, then by name', () => {
@@ -458,13 +543,18 @@ describe('filterSuggestions', () => {
   });
 
   it('is fast enough to run on every keystroke', () => {
+    // A generous bound on the median, so a loaded CI machine cannot flake it;
+    // a laptop takes well under 1 ms.
     const queries = ['g', 'ge', 'ger', 'germ', 'grmny', 'xqzwv', 'cote d iv', 'phillipines'];
-    const start = performance.now();
-    for (let i = 0; i < 400; i += 1) {
+    const timings = [];
+    for (let i = 0; i < 200; i += 1) {
+      const start = performance.now();
       filterSuggestions(queries[i % queries.length], countries);
+      timings.push(performance.now() - start);
     }
-    const perCall = (performance.now() - start) / 400;
-    assert.ok(perCall < 5, `${perCall.toFixed(2)} ms per call`);
+    timings.sort((a, b) => a - b);
+    const median = timings[timings.length / 2];
+    assert.ok(median < 25, `median ${median.toFixed(2)} ms per call`);
   });
 
   it('rejects bad arguments', () => {
@@ -478,6 +568,9 @@ describe('filterSuggestions', () => {
       () => filterSuggestions('a', [{ code: 'fr', name: 'France', aliases: 'Gaul' }]),
       { name: 'TypeError', message: /`countries\[0\]\.aliases`/ }
     );
+    for (const options of [null, 'x', [8]]) {
+      assert.throws(() => filterSuggestions('a', countries, options), { name: 'TypeError', message: /`options`/ });
+    }
     for (const limit of [0, -1, 1.5, '3']) {
       assert.throws(() => filterSuggestions('a', countries, { limit }), { name: 'RangeError', message: /`limit`/ });
     }

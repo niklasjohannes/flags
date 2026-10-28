@@ -24,7 +24,9 @@
 // types. It never grades text: the user answers by picking a suggestion
 // (PLAN #7). Matching is against `name` and `aliases` after `normalizeText`,
 // in tiers from best to worst (see `MATCH_TIERS`). Each country appears once,
-// under its best match.
+// under its best match. Typo tolerance grows with the query length and never
+// shrinks, so typing further along a misspelling the list already accepted
+// does not make the country vanish.
 
 // ---- Tunables ----
 
@@ -41,11 +43,17 @@ export const DEFAULT_SUGGESTION_LIMIT = 8;
  *   - `prefix`: `term` starts with `query`;
  *   - `word-prefix`: a later word of `term` starts with `query`;
  *   - `substring`: `query` appears anywhere in `term`;
- *   - `subsequence`: the letters of `query` appear in order from the start of
- *     one of `term`'s words (`grmny` -> Germany);
- *   - `typo`: a prefix of `term` from the start of one of its words is within
+ *   - `fuzzy`: either the letters of `query` appear in order from the start
+ *     of one of `term`'s words, with gaps (`grmny` -> Germany), or a prefix of
+ *     `term` from the start of one of its words is within
  *     `getTypoThreshold(query)` edits (insert, delete, substitute or swap two
- *     neighbours) of `query` (`brazl` -> Brazil).
+ *     neighbours) of `query` (`brazl` -> Brazil). Both are scored on one
+ *     closeness scale: each edit costs 1 (plus `FIRST_LETTER_TYPO_COST` if
+ *     the first letter is wrong) and each skipped letter costs
+ *     `SUBSEQUENCE_GAP_COST`; the cheaper reading counts. So a one-letter
+ *     typo of the intended name beats a match whose letters are spread
+ *     across a long, unrelated name (`fratce` -> France, not Federated
+ *     States of Micronesia).
  * Spaces are ignored when comparing, so `ivorycoast` and `ivory coast` match
  * alike.
  */
@@ -54,19 +62,56 @@ export const MATCH_TIERS = Object.freeze([
   'prefix',
   'word-prefix',
   'substring',
-  'subsequence',
-  'typo'
+  'fuzzy'
 ]);
 
-/** Shortest query (spaces excluded) that gets one typo tolerated. */
-export const TYPO_MIN_LENGTH = 4;
+/**
+ * Cost of one skipped letter in a `fuzzy` subsequence match, against 1 per
+ * edit. Below 1 because dropping letters (often vowels) is a common way to
+ * type fast, and is cheaper than an edit of the same count.
+ */
+export const SUBSEQUENCE_GAP_COST = 0.5;
 
-/** Shortest query (spaces excluded) that gets two typos tolerated. */
-export const TYPO_TWO_EDIT_LENGTH = 8;
+/**
+ * Extra cost of a `fuzzy` typo reading whose first letter differs from the
+ * word it is matched against. People rarely mistype the first letter, so
+ * `sirya` should rank Syria above Iran, which is as many edits away.
+ */
+export const FIRST_LETTER_TYPO_COST = 0.5;
+
+/**
+ * Shortest query (spaces excluded) that gets one typo tolerated. At 3, a
+ * country shown for a 2-letter query (as a subsequence) stays shown once the
+ * next correct letter is typed.
+ */
+export const TYPO_MIN_LENGTH = 3;
+
+/**
+ * Shortest query (spaces excluded) that gets two typos tolerated. Low enough
+ * that a word misspelled twice keeps showing while it is typed out (`sir`,
+ * `siry`, `sirya` -> Syria; `morroc`, `morroco` -> Morocco). Loose matches
+ * this lets in rank below closer ones, so they only fill the tail.
+ */
+export const TYPO_TWO_EDIT_LENGTH = 4;
 
 const CODE_PATTERN = /^[A-Za-z0-9-]{1,16}$/;
 const COMBINING_MARKS = /\p{M}+/gu;
 const NON_ALPHANUMERIC = /[^\p{L}\p{N}]+/gu;
+
+// Lowercase letters that Unicode decomposition leaves whole, folded to the
+// ASCII spelling an English keyboard would type.
+const LETTER_FOLDS = Object.freeze({
+  'ß': 'ss',
+  'ø': 'o',
+  'æ': 'ae',
+  'œ': 'oe',
+  'ł': 'l',
+  'đ': 'd',
+  'ð': 'd',
+  'ı': 'i',
+  'þ': 'th'
+});
+const FOLDED_LETTERS = new RegExp(`[${Object.keys(LETTER_FOLDS).join('')}]`, 'gu');
 
 // ---- Validation helpers ----
 
@@ -114,6 +159,12 @@ function assertNameFields(countries) {
       throw new TypeError(`\`countries[${i}].aliases\` must be an array of strings.`);
     }
   });
+}
+
+function assertOptions(options) {
+  if (options !== undefined && !isPlainObject(options)) {
+    throw new TypeError('`options` must be an object, or omitted.');
+  }
 }
 
 function assertRng(rng) {
@@ -189,10 +240,15 @@ function isRelated(candidate, target) {
  *   All flags (the `countries` array of `data/countries.json`).
  * @param {() => number} options.rng Random source returning `[0, 1)`.
  * @returns {string[]} `DISTRACTOR_COUNT` distinct codes, in random order.
- * @throws {RangeError} If `code` is not in `countries`, or the whole dataset
- *   has fewer than `DISTRACTOR_COUNT` valid candidates.
+ * @throws {TypeError} If `options`, `code`, `countries` or `rng` is
+ *   malformed.
+ * @throws {RangeError} If `code` is not in `countries`, `rng` returns a value
+ *   outside `[0, 1)`, or the whole dataset has fewer than `DISTRACTOR_COUNT`
+ *   valid candidates.
  */
-export function pickDistractors({ code, countries, rng } = {}) {
+export function pickDistractors(options) {
+  assertOptions(options);
+  const { code, countries, rng } = options ?? {};
   assertCode(code, 'code');
   assertCountryList(countries);
   assertRegionFields(countries);
@@ -235,20 +291,23 @@ export function pickDistractors({ code, countries, rng } = {}) {
  * @param {() => number} options.rng Random source returning `[0, 1)`.
  * @returns {string[]} `DISTRACTOR_COUNT + 1` distinct codes in random order,
  *   exactly one of which is `code`.
+ * @throws {TypeError} As `pickDistractors`.
  * @throws {RangeError} As `pickDistractors`.
  */
-export function buildChoices({ code, countries, rng } = {}) {
-  const distractors = pickDistractors({ code, countries, rng });
-  return shuffle([code, ...distractors], rng);
+export function buildChoices(options) {
+  const distractors = pickDistractors(options);
+  return shuffle([options.code, ...distractors], options.rng);
 }
 
 // ---- Typing-mode autosuggest ----
 
 /**
- * Normalize text for matching: strip diacritics (NFD, then drop combining
- * marks), lowercase, turn every run of punctuation or whitespace into one
- * space, and trim. `"Côte d'Ivoire"` and `"cote  d ivoire"` both become
- * `"cote d ivoire"`.
+ * Normalize text for matching: decompose (NFKD, which also splits ligatures
+ * and full-width forms), drop combining marks, lowercase, fold the letters
+ * decomposition leaves whole (`ß` -> `ss`, `ø` -> `o`, `æ` -> `ae`, `œ` ->
+ * `oe`, `ł` -> `l`, `đ`/`ð` -> `d`, `ı` -> `i`, `þ` -> `th`), turn every run
+ * of punctuation or whitespace into one space, and trim. `"Côte d'Ivoire"`
+ * and `"cote  d ivoire"` both become `"cote d ivoire"`.
  *
  * @param {string} text Any text.
  * @returns {string} Normalized text (empty if `text` has no letters or
@@ -259,9 +318,10 @@ export function normalizeText(text) {
     throw new TypeError('`text` must be a string.');
   }
   return text
-    .normalize('NFD')
+    .normalize('NFKD')
     .replace(COMBINING_MARKS, '')
     .toLowerCase()
+    .replace(FOLDED_LETTERS, (letter) => LETTER_FOLDS[letter])
     .replace(NON_ALPHANUMERIC, ' ')
     .trim();
 }
@@ -269,7 +329,8 @@ export function normalizeText(text) {
 /**
  * How many typos `filterSuggestions` tolerates for a query: none below
  * `TYPO_MIN_LENGTH` letters (short queries would match almost anything), one
- * up to `TYPO_TWO_EDIT_LENGTH - 1`, two from there on.
+ * up to `TYPO_TWO_EDIT_LENGTH - 1`, two from there on. Never decreases as the
+ * query grows.
  *
  * @param {string} query Raw query text.
  * @returns {number} Maximum edit distance, 0-2.
@@ -364,26 +425,18 @@ function matchTerm(query, compactQuery, term, maxDistance) {
     return { tier: 3, score: compactIndex };
   }
 
-  const suffixes = wordSuffixes(term);
-  let gaps = Infinity;
-  for (const suffix of suffixes) {
-    const found = subsequenceGaps(compactQuery, suffix);
-    if (found !== -1) {
-      gaps = Math.min(gaps, found);
+  let cost = Infinity;
+  for (const suffix of wordSuffixes(term)) {
+    const gaps = subsequenceGaps(compactQuery, suffix);
+    if (gaps !== -1) {
+      cost = Math.min(cost, gaps * SUBSEQUENCE_GAP_COST);
+    }
+    if (maxDistance > 0) {
+      const penalty = compactQuery[0] === suffix[0] ? 0 : FIRST_LETTER_TYPO_COST;
+      cost = Math.min(cost, prefixEditDistance(compactQuery, suffix, maxDistance) + penalty);
     }
   }
-  if (gaps !== Infinity) {
-    return { tier: 4, score: gaps };
-  }
-
-  if (maxDistance === 0) {
-    return null;
-  }
-  let distance = Infinity;
-  for (const suffix of suffixes) {
-    distance = Math.min(distance, prefixEditDistance(compactQuery, suffix, maxDistance));
-  }
-  return distance <= maxDistance ? { tier: 5, score: distance } : null;
+  return cost === Infinity ? null : { tier: 4, score: cost };
 }
 
 function compareMatches(a, b) {
@@ -399,8 +452,8 @@ function compareMatches(a, b) {
  *
  * Both `query` and each country's `name` and `aliases` go through
  * `normalizeText`, then are compared in the tiers of `MATCH_TIERS`. Within a
- * tier, closer matches come first (earlier position, fewer gaps or fewer
- * edits), then shorter matched terms, then names alphabetically. Each country
+ * tier, closer matches come first (earlier position, or lower `fuzzy` cost),
+ * then shorter matched terms, then names alphabetically. Each country
  * appears at most once, under its best match; on a tie, `name` wins over an
  * alias. Duplicate codes in `countries` are counted once.
  *
@@ -413,13 +466,17 @@ function compareMatches(a, b) {
  * @returns {{ code: string, name: string, matched: string }[]} Suggestions,
  *   best first; `matched` is the `name` or alias that hit, as written in the
  *   data. Empty if `query` has no letters or digits.
+ * @throws {TypeError} If `query`, `countries` or `options` is malformed.
+ * @throws {RangeError} If `options.limit` is not a positive integer.
  */
-export function filterSuggestions(query, countries, { limit = DEFAULT_SUGGESTION_LIMIT } = {}) {
+export function filterSuggestions(query, countries, options) {
   if (typeof query !== 'string') {
     throw new TypeError('`query` must be a string.');
   }
   assertCountryList(countries);
   assertNameFields(countries);
+  assertOptions(options);
+  const { limit = DEFAULT_SUGGESTION_LIMIT } = options ?? {};
   if (!Number.isInteger(limit) || limit < 1) {
     throw new RangeError('`limit` must be a positive integer.');
   }
