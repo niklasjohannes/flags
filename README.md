@@ -2,13 +2,14 @@
 
 A zero-dependency progressive web app for learning the flags of the world with spaced repetition. Plain HTML, CSS and JavaScript — no build step, no npm packages.
 
-> Work in progress. See [`docs/SPEC.md`](docs/SPEC.md) for the build plan.
+Live at **<https://niklasjohannes.github.io/flags/>**. On iPhone, open it in Safari and use Share → Add to Home Screen; after the first load it works offline. See [`docs/SPEC.md`](docs/SPEC.md) for the build plan.
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
 | `index.html` | App entry point |
+| `.nojekyll` | Tells GitHub Pages to serve files as-is, without Jekyll processing |
 | `manifest.webmanifest` | Web app manifest (install to home screen) |
 | `sw.js` | Service worker: offline cache, deploy updates |
 | `css/` | Stylesheets |
