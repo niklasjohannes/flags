@@ -87,7 +87,7 @@ import * as practice from './views/practice.js';
 import * as test from './views/test.js';
 import * as results from './views/results.js';
 import { watchResume } from './resume.js';
-import { el } from './ui.js';
+import { el, isKeyboardOpen } from './ui.js';
 import { createReloadState, decideReload } from './update-reload.js';
 
 const DATA_URL = './data/countries.json';
@@ -254,17 +254,21 @@ function registerServiceWorker() {
 }
 
 // Expose the height the on-screen keyboard leaves as `--viewport-height`,
-// so css/question.css can shrink a typing question's flag and keep the
-// suggestions above the keyboard. `* scale` undoes pinch zoom, which also
-// shrinks `visualViewport`. CSSOM `setProperty` is not an inline style
-// attribute, so the CSP allows it.
+// and mark `<html>` with `.keyboard-open` while a keyboard is up, so
+// css/question.css can shrink a typing question's flag and keep the
+// suggestions above the keyboard, and only then (GitHub #35). `* scale`
+// undoes pinch zoom, which also shrinks `visualViewport`. CSSOM
+// `setProperty` is not an inline style attribute, so the CSP allows it.
 function trackViewportHeight() {
   const viewport = window.visualViewport;
   if (viewport === undefined || viewport === null) {
     return;
   }
+  const root = document.documentElement;
   const update = () => {
-    document.documentElement.style.setProperty('--viewport-height', `${Math.round(viewport.height * viewport.scale)}px`);
+    const viewportHeight = Math.round(viewport.height * viewport.scale);
+    root.style.setProperty('--viewport-height', `${viewportHeight}px`);
+    root.classList.toggle('keyboard-open', isKeyboardOpen({ layoutHeight: root.clientHeight, viewportHeight }));
   };
   viewport.addEventListener('resize', update);
   update();
