@@ -18,6 +18,16 @@ A zero-dependency progressive web app for learning the flags of the world with s
 | `vendor/` | Unmodified upstream inputs (flag-icons code list and license) |
 | `test/` | `node --test` suites |
 
+## Running locally
+
+Serve the repo root with any static server, e.g.:
+
+```bash
+python3 -m http.server 8004
+```
+
+then open <http://localhost:8004/>. (`fetch` of `data/countries.json` needs HTTP; opening `index.html` as a file does not work.)
+
 ## Running the tests
 
 Tests use Node's built-in test runner — nothing to install:
