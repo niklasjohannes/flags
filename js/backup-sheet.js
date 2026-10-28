@@ -65,19 +65,25 @@ function canShareFile(file) {
  * Build the backup sheet.
  *
  * @param {object} options
+ * @param {string[]} options.knownCodes The dataset's codes. An import keeps
+ *   only entries for them, and the confirm counts only them.
  * @param {() => void} options.onRestored Called after an import was saved and
  *   the sheet closed; re-render home so it shows the restored progress.
  * @param {AbortSignal} options.signal Removes every listener when aborted.
  * @returns {{ dialog: HTMLDialogElement, open: () => void }} Put `dialog` in
  *   the view; `open` shows it.
  */
-export function createBackupSheet({ onRestored, signal } = {}) {
+export function createBackupSheet({ knownCodes, onRestored, signal } = {}) {
+  if (!Array.isArray(knownCodes) || !knownCodes.every((code) => typeof code === 'string')) {
+    throw new TypeError('`knownCodes` must be an array of country codes.');
+  }
   if (typeof onRestored !== 'function') {
     throw new TypeError('`onRestored` must be a function.');
   }
   if (!(signal instanceof AbortSignal)) {
     throw new TypeError('`signal` must be an `AbortSignal`.');
   }
+  const known = new Set(knownCodes);
 
   const title = el('h2', { id: 'backup-title', class: 'sheet-title' });
   const text = el('p', { id: 'backup-text', class: 'sheet-text' });
@@ -136,7 +142,9 @@ export function createBackupSheet({ onRestored, signal } = {}) {
   });
 
   const showConfirm = (result) => {
-    const existing = Object.keys(loadStates(localToday())).length;
+    // Progress for codes no longer in the data is replaced too, but it is
+    // nothing the user would miss.
+    const existing = Object.keys(loadStates(localToday())).filter((code) => known.has(code)).length;
     const savedOn = result.exportedAt === null
       ? ''
       : `, saved on ${new Date(result.exportedAt).toLocaleDateString(undefined, { dateStyle: 'medium' })}`;
@@ -145,7 +153,7 @@ export function createBackupSheet({ onRestored, signal } = {}) {
       : `It replaces the progress on this device (${countFlags(existing)}).`;
     const skipped = result.dropped === 0
       ? ''
-      : ` ${result.dropped} unreadable ${result.dropped === 1 ? 'entry is' : 'entries are'} skipped.`;
+      : ` ${result.dropped} ${result.dropped === 1 ? 'entry is' : 'entries are'} skipped (unreadable, or not a flag in this app).`;
     show({
       heading: 'Restore this backup?',
       body: `It has progress for ${countFlags(result.count)}${savedOn}. ${replaces}${skipped}`,
@@ -220,7 +228,7 @@ export function createBackupSheet({ onRestored, signal } = {}) {
     if (signal.aborted || !dialog.open) {
       return;
     }
-    const result = parseBackup(contents, localToday());
+    const result = parseBackup(contents, localToday(), known);
     if (result.ok) {
       showConfirm(result);
     } else {

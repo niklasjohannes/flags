@@ -1,5 +1,5 @@
-// The service worker's precache list and cache version (spec #8). The list
-// must be honest (every file exists, every app file is on it, nothing else
+// The service worker's precache list and cache version (spec #8); its
+// run-time behaviour is in test/sw-runtime.test.js. The list must be honest (every file exists, every app file is on it, nothing else
 // is) and the committed version must match a fresh content hash, so CI fails
 // when someone changes an app file and forgets `node scripts/build-sw.js`.
 
@@ -81,31 +81,9 @@ describe('sw.js', () => {
     assert.match(app, /registration\.update\(\)/);
   });
 
-  it('precaches cache-busted, hash-checked copies under the clean URL', () => {
-    assert.match(SW_SOURCE, /searchParams\.set\('v', CACHE_VERSION\)/);
-    assert.match(SW_SOURCE, /fetch\(busted\.href, \{ cache: 'reload' \}\)/);
-    assert.match(SW_SOURCE, /crypto\.subtle\.digest\('SHA-256', body\)/);
-    assert.match(SW_SOURCE, /if \(digest !== sha256\) \{\n\s+throw /);
-    assert.match(SW_SOURCE, /cache\.put\(url\.href, /);
-  });
-
-  it('copies only `Content-Type` onto the cached copy (no encoding or length)', () => {
-    const put = SW_SOURCE.slice(SW_SOURCE.indexOf('await cache.put(url.href'), SW_SOURCE.indexOf('}));', SW_SOURCE.indexOf('await cache.put(url.href')));
-    assert.match(put, /headers: \{ 'Content-Type': getContentType\(response, url\) \}/);
-    assert.doesNotMatch(put, /response\.headers|statusText/);
-    assert.doesNotMatch(SW_SOURCE, /headers: response\.headers/);
-  });
-
-  it('reads only its own cache in the fetch path (never `caches.open` there)', () => {
-    const respond = SW_SOURCE.slice(SW_SOURCE.indexOf('async function respond('), SW_SOURCE.indexOf("self.addEventListener('install'"));
-    assert.doesNotMatch(respond, /caches\.open/);
-    assert.equal(respond.match(/caches\.match\(/g)?.length, 4);
-    assert.equal(respond.match(/options/g)?.length, 5);
-  });
-
-  it('only caches ok, basic, non-redirected responses', () => {
-    assert.match(SW_SOURCE, /response\.ok && response\.type === 'basic' && !response\.redirected/);
-    // The only write to a cache is the precache.
+  // The behaviour (install, activate, fetch) runs in test/sw-runtime.test.js.
+  // These guard intent that a behaviour test cannot see.
+  it('writes to a cache in one place only, the precache', () => {
     assert.equal(SW_SOURCE.match(/\.put\(/g)?.length, 1);
     assert.doesNotMatch(SW_SOURCE, /\.add(All)?\(/);
   });

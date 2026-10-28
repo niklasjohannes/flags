@@ -86,7 +86,9 @@ import * as home from './views/home.js';
 import * as practice from './views/practice.js';
 import * as test from './views/test.js';
 import * as results from './views/results.js';
+import { watchResume } from './resume.js';
 import { el } from './ui.js';
+import { createReloadState, decideReload } from './update-reload.js';
 
 const DATA_URL = './data/countries.json';
 
@@ -98,9 +100,8 @@ export const UPDATE_CHECK_INTERVAL_MS = 15 * 60_000;
 let countries = null;
 let current = null;
 let isTransitioning = false;
-// Set when a new service worker took over; see "Service worker" above.
-let isReloadPending = false;
-let isReloading = false;
+// See "Service worker" above; the rules are in js/update-reload.js.
+let reloadState = createReloadState(false);
 
 function deepFreeze(value) {
   if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
@@ -161,8 +162,8 @@ function navigate(name, params = {}) {
     queueMicrotask(() => navigate(name, params));
     return;
   }
-  if (name === 'home' && isReloadPending) {
-    reload();
+  // An update is waiting: reload instead of showing home.
+  if (name === 'home' && applyReloadEvent('navigatehome')) {
     return;
   }
   isTransitioning = true;
@@ -206,19 +207,17 @@ function transition(name, params) {
 
 // ---- Service worker ----
 
-function reload() {
-  if (!isReloading) {
-    isReloading = true;
+// Feed `event` to js/update-reload.js and reload if it says so. Returns
+// whether a reload has started (now or before).
+function applyReloadEvent(event) {
+  const isOnHome = current !== null && current.name === 'home';
+  const hasOpenDialog = current !== null && current.container.querySelector('dialog[open]') !== null;
+  const decision = decideReload(reloadState, event, { isOnHome, hasOpenDialog });
+  reloadState = decision.state;
+  if (decision.reload) {
     location.reload();
   }
-}
-
-function reloadIfSafe() {
-  const isOnHome = current !== null && current.name === 'home' &&
-    current.container.querySelector('dialog[open]') === null;
-  if (isOnHome) {
-    reload();
-  }
+  return reloadState.isReloading;
 }
 
 function registerServiceWorker() {
@@ -227,21 +226,14 @@ function registerServiceWorker() {
   }
   // The first worker claiming a page that had none (first visit) is not an
   // update: nothing to reload.
-  let hadController = navigator.serviceWorker.controller !== null;
+  reloadState = createReloadState(navigator.serviceWorker.controller !== null);
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController) {
-      hadController = true;
-      return;
-    }
-    isReloadPending = true;
-    reloadIfSafe();
+    applyReloadEvent('controllerchange');
   });
   // A sheet open on home deferred the reload: retry when it closes. `close`
   // does not bubble, so listen in the capture phase.
   document.addEventListener('close', () => {
-    if (isReloadPending) {
-      reloadIfSafe();
-    }
+    applyReloadEvent('dialogclose');
   }, { capture: true });
   // Registering checks for an update itself, so the clock starts now.
   let lastCheckAt = Date.now();
@@ -261,7 +253,27 @@ function registerServiceWorker() {
   });
 }
 
+// Expose the height the on-screen keyboard leaves as `--viewport-height`,
+// so css/question.css can shrink a typing question's flag and keep the
+// suggestions above the keyboard. `* scale` undoes pinch zoom, which also
+// shrinks `visualViewport`. CSSOM `setProperty` is not an inline style
+// attribute, so the CSP allows it.
+function trackViewportHeight() {
+  const viewport = window.visualViewport;
+  if (viewport === undefined || viewport === null) {
+    return;
+  }
+  const update = () => {
+    document.documentElement.style.setProperty('--viewport-height', `${Math.round(viewport.height * viewport.scale)}px`);
+  };
+  viewport.addEventListener('resize', update);
+  update();
+}
+
 async function start() {
+  trackViewportHeight();
+  // Before home first mounts, so its resume listeners run after these.
+  watchResume();
   try {
     countries = await loadCountries();
   } catch (error) {

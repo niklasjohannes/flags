@@ -422,3 +422,30 @@ describe('several all-correct rounds on one day', () => {
     });
   }
 });
+
+describe('Keep going on a fresh profile (GitHub #32)', () => {
+  it('shows 40 distinct flags in 4 all-correct rounds over All', () => {
+    for (let seed = 1; seed <= 20; seed += 1) {
+      const rng = createRng(seed);
+      let states = {};
+      let persistedCodes = new Set();
+      const shown = new Set();
+      for (let i = 0; i < 4; i += 1) {
+        let round = createRound(pickRound({ states, countries, today: TODAY, rng }));
+        while (!isRoundComplete(round)) {
+          shown.add(getCurrentCode(round));
+          const result = answerCurrent(round, true);
+          ({ states, persistedCodes } = recordAnswer({
+            states,
+            code: result.code,
+            correct: true,
+            today: TODAY,
+            persistedCodes
+          }));
+          round = result.round;
+        }
+      }
+      assert.equal(shown.size, 40, `seed ${seed}`);
+    }
+  });
+});

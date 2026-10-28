@@ -10,7 +10,7 @@
 //
 // Import treats the file as untrusted: the envelope is checked, then
 // `states` goes through `sanitizeStates`, the same cleaning as anything read
-// from `localStorage`.
+// from `localStorage`, and only entries for the dataset's codes are kept.
 
 import { sanitizeStates } from './srs.js';
 
@@ -71,21 +71,33 @@ export function serializeBackup(states, now) {
  * Never throws for a bad file: it returns `{ ok: false, error }` with a
  * message from `BACKUP_ERRORS` to show the user. Only bad arguments throw.
  *
+ * Only entries for `knownCodes` are kept. Any other key (a code removed from
+ * the data, an upper-cased `FR`, a typo) counts as dropped, like an
+ * unreadable entry: restoring it would report progress that no flag uses.
+ *
  * @param {string} text The file's text.
  * @param {string} today Local date, `YYYY-MM-DD`, for `sanitizeStates`.
+ * @param {ReadonlySet<string> | string[]} knownCodes The dataset's codes
+ *   (`countries.map((country) => country.code)`).
  * @returns {{ ok: true, states: Object<string, object>, count: number,
  *   dropped: number, exportedAt: string | null } | { ok: false, error: string }}
  *   On success: the sanitized states, how many entries they hold, how many
- *   entries of the file were unreadable and dropped, and `exportedAt` if it
- *   is a valid date string.
+ *   entries of the file were unreadable or not for a known flag and dropped,
+ *   and `exportedAt` if it is a valid date string.
  */
-export function parseBackup(text, today) {
+export function parseBackup(text, today, knownCodes) {
   if (typeof text !== 'string') {
     throw new TypeError('`text` must be a string.');
   }
   if (typeof today !== 'string' || !DATE_PATTERN.test(today)) {
     throw new TypeError('`today` must be a `YYYY-MM-DD` date string.');
   }
+  const isCodeList = (knownCodes instanceof Set || Array.isArray(knownCodes)) &&
+    [...knownCodes].every((code) => typeof code === 'string');
+  if (!isCodeList) {
+    throw new TypeError('`knownCodes` must be a `Set` or an array of country codes.');
+  }
+  const known = new Set(knownCodes);
   if (text.length > MAX_BACKUP_LENGTH) {
     return { ok: false, error: BACKUP_ERRORS.tooLarge };
   }
@@ -102,7 +114,9 @@ export function parseBackup(text, today) {
   if (raw.version > BACKUP_VERSION) {
     return { ok: false, error: BACKUP_ERRORS.newerVersion };
   }
-  const states = sanitizeStates(raw.states, today);
+  const states = Object.fromEntries(
+    Object.entries(sanitizeStates(raw.states, today)).filter(([code]) => known.has(code))
+  );
   const total = Object.keys(raw.states).length;
   const count = Object.keys(states).length;
   // An empty backup is valid (progress that was reset); one whose every

@@ -22,6 +22,62 @@ import { buildChoices, filterSuggestions } from './quiz.js';
 import { QUIZ_MODES } from './storage.js';
 import { el, renderFlag } from './ui.js';
 
+/**
+ * Time (ms) after a question appears during which clicks on it are ignored
+ * (`guardQuestionArea`). The next question's options land where the last tap
+ * was, so without it a double tap, or a double press of Enter on Next, would
+ * answer a flag the user never saw. The window is the same whatever the
+ * previous answer was, so it gives nothing away in test mode.
+ */
+export const ANSWER_GUARD_MS = 300;
+
+/**
+ * Protect the questions rendered into `area` from answers meant for what was
+ * on screen before (GitHub #28). Shared by practice and test mode, so the
+ * two cannot drift apart. Both listeners are in the capture phase, so they
+ * run before the options' own:
+ *   - a click (including an Enter / Space activation) within
+ *     `ANSWER_GUARD_MS` of `arm()` is swallowed;
+ *   - a key auto-repeat on a button is swallowed: a held Enter on Next or
+ *     Keep going repeats on the newly focused option, and only the first
+ *     press may count. Typing into the input may still repeat.
+ *
+ * @param {HTMLElement} area The question's container (what is passed to
+ *   `renderQuestion`).
+ * @param {object} options
+ * @param {AbortSignal} options.signal Removes the listeners when aborted.
+ * @returns {{ arm: () => void }} Call `arm()` right after rendering each
+ *   question.
+ */
+export function guardQuestionArea(area, { signal } = {}) {
+  if (!(area instanceof HTMLElement)) {
+    throw new TypeError('`area` must be an element.');
+  }
+  if (!(signal instanceof AbortSignal)) {
+    throw new TypeError('`signal` must be an `AbortSignal`.');
+  }
+  let shownAt = -Infinity;
+  const swallow = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  area.addEventListener('click', (event) => {
+    if (performance.now() - shownAt < ANSWER_GUARD_MS) {
+      swallow(event);
+    }
+  }, { capture: true, signal });
+  area.addEventListener('keydown', (event) => {
+    if (event.repeat && event.target instanceof HTMLButtonElement) {
+      swallow(event);
+    }
+  }, { capture: true, signal });
+  return Object.freeze({
+    arm: () => {
+      shownAt = performance.now();
+    }
+  });
+}
+
 // What each container showed last: the question's controller and, in typing
 // mode, the parts kept for the next question.
 const previousByContainer = new WeakMap();
