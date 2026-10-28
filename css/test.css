@@ -1,5 +1,117 @@
 /*
  * Test and results views (spec #6, owned by issue-6-test-mode). Scope every
  * rule under `.view-test` or `.view-results`. Base tokens and shared controls
- * (`.button`, `.choice-group`) are in css/style.css.
+ * (`.button`, `.choice-group`) are in css/style.css. Minimal and monochrome;
+ * the visual pass is spec #7.
  */
+
+/* ---- Test: scope picker ---- */
+
+.view-test .test-intro {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+}
+
+.view-test .test-mode {
+  margin: 0 0 var(--space-6);
+}
+
+.view-test .test-mode-label {
+  color: var(--color-text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.view-test .test-actions,
+.view-results .results-actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ---- Test: blind pass ---- */
+
+.view-test .test-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.view-test .test-counter {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.view-test .test-exit {
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-bg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ---- Results ---- */
+
+.view-results .results-scope {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.view-results .results-score {
+  margin: var(--space-2) 0 var(--space-8);
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.view-results .results-missed-title {
+  margin: 0 0 var(--space-3);
+  font-size: 1.125rem;
+}
+
+.view-results .results-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-8);
+  padding: 0;
+  list-style: none;
+}
+
+.view-results .results-miss {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.view-results .results-flag {
+  flex: none;
+  width: 4rem;
+  height: 3rem;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius) / 4);
+  background: var(--color-surface);
+}
+
+.view-results .results-miss-text {
+  display: grid;
+  min-width: 0;
+}
+
+.view-results .results-miss-answer {
+  color: var(--color-text-muted);
+  font-size: 0.9375rem;
+}
+
+.view-results .results-none {
+  margin: 0 0 var(--space-8);
+  color: var(--color-text-muted);
+}
