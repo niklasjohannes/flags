@@ -13,6 +13,8 @@ import {
 import { createCardState, sanitizeStates } from '../js/srs.js';
 
 const TODAY = '2026-10-28';
+// Stands in for the dataset's codes (`countries.map((country) => country.code)`).
+const KNOWN_CODES = new Set(['fr', 'jp', 'de', 'it', 'es']);
 const NOW = new Date('2026-10-28T09:30:00.000Z');
 
 const STATES = Object.freeze({
@@ -47,7 +49,7 @@ describe('serializeBackup', () => {
 describe('parseBackup', () => {
   it('round-trips an export exactly (byte-for-byte once re-saved)', () => {
     const states = sanitizeStates(STATES, TODAY);
-    const result = parseBackup(serializeBackup(states, NOW), TODAY);
+    const result = parseBackup(serializeBackup(states, NOW), TODAY, KNOWN_CODES);
     assert.equal(result.ok, true);
     assert.deepEqual(result.states, states);
     assert.equal(JSON.stringify(result.states), JSON.stringify(states));
@@ -57,7 +59,7 @@ describe('parseBackup', () => {
   });
 
   it('accepts an empty backup', () => {
-    const result = parseBackup(envelope({ states: {} }), TODAY);
+    const result = parseBackup(envelope({ states: {} }), TODAY, KNOWN_CODES);
     assert.deepEqual(result, { ok: true, states: {}, count: 0, dropped: 0, exportedAt: NOW.toISOString() });
   });
 
@@ -69,7 +71,7 @@ describe('parseBackup', () => {
       it: { dueDate: 'tomorrow' },
       es: { repetitions: 2.7, easeFactor: 99, intervalDays: 6, dueDate: '2026-11-01', lapses: -3, extra: true }
     };
-    const result = parseBackup(envelope({ states }), TODAY);
+    const result = parseBackup(envelope({ states }), TODAY, KNOWN_CODES);
     assert.equal(result.ok, true);
     assert.deepEqual(Object.keys(result.states), ['fr', 'jp', 'es']);
     assert.equal(result.count, 3);
@@ -78,16 +80,45 @@ describe('parseBackup', () => {
     assert.equal('extra' in result.states.es, false);
   });
 
+  it('drops and counts entries for codes outside the dataset (GitHub #30)', () => {
+    const states = {
+      ...STATES,
+      FR: { ...STATES.fr, code: 'FR' },
+      DE: { code: 'DE', dueDate: TODAY },
+      xk: { code: 'xk', dueDate: TODAY },
+      constructor: { dueDate: TODAY }
+    };
+    const result = parseBackup(envelope({ states }), TODAY, KNOWN_CODES);
+    assert.equal(result.ok, true);
+    assert.deepEqual(Object.keys(result.states), ['fr', 'jp']);
+    assert.equal(result.count, 2);
+    assert.equal(result.dropped, 4);
+  });
+
+  it('refuses a backup whose every entry is for an unknown or upper-cased code', () => {
+    const states = { FR: { code: 'FR', dueDate: TODAY }, JP: { dueDate: TODAY }, zz: { dueDate: TODAY } };
+    assert.deepEqual(
+      parseBackup(envelope({ states }), TODAY, KNOWN_CODES),
+      { ok: false, error: BACKUP_ERRORS.noValidEntries }
+    );
+  });
+
+  it('accepts `knownCodes` as an array too', () => {
+    const result = parseBackup(envelope(), TODAY, ['fr']);
+    assert.deepEqual(Object.keys(result.states), ['fr']);
+    assert.equal(result.dropped, 1);
+  });
+
   it('pulls a far-future due date back, as on load', () => {
     const states = { fr: { ...STATES.fr, dueDate: '2099-01-01' } };
-    const result = parseBackup(envelope({ states }), TODAY);
+    const result = parseBackup(envelope({ states }), TODAY, KNOWN_CODES);
     assert.ok(result.states.fr.dueDate < '2099-01-01');
   });
 
   it('gives `exportedAt: null` when it is missing or not a date', () => {
-    assert.equal(parseBackup(envelope({ exportedAt: undefined }), TODAY).exportedAt, null);
-    assert.equal(parseBackup(envelope({ exportedAt: 'yesterday' }), TODAY).exportedAt, null);
-    assert.equal(parseBackup(envelope({ exportedAt: 42 }), TODAY).exportedAt, null);
+    assert.equal(parseBackup(envelope({ exportedAt: undefined }), TODAY, KNOWN_CODES).exportedAt, null);
+    assert.equal(parseBackup(envelope({ exportedAt: 'yesterday' }), TODAY, KNOWN_CODES).exportedAt, null);
+    assert.equal(parseBackup(envelope({ exportedAt: 42 }), TODAY, KNOWN_CODES).exportedAt, null);
   });
 
   const refusals = {
@@ -109,19 +140,22 @@ describe('parseBackup', () => {
   };
   for (const [name, [text, error]] of Object.entries(refusals)) {
     it(`refuses ${name} with a clear message`, () => {
-      assert.deepEqual(parseBackup(text, TODAY), { ok: false, error });
+      assert.deepEqual(parseBackup(text, TODAY, KNOWN_CODES), { ok: false, error });
     });
   }
 
   it('rejects bad arguments', () => {
-    assert.throws(() => parseBackup(null, TODAY), TypeError);
+    assert.throws(() => parseBackup(null, TODAY, KNOWN_CODES), TypeError);
     assert.throws(() => parseBackup('{}', '28/10/2026'), TypeError);
     assert.throws(() => parseBackup('{}'), TypeError);
+    assert.throws(() => parseBackup('{}', TODAY), TypeError);
+    assert.throws(() => parseBackup('{}', TODAY, 'fr,jp'), TypeError);
+    assert.throws(() => parseBackup('{}', TODAY, [1, 2]), TypeError);
   });
 
   it('keeps a fresh card exactly', () => {
     const states = { fr: createCardState('fr') };
-    const result = parseBackup(serializeBackup(states, NOW), TODAY);
+    const result = parseBackup(serializeBackup(states, NOW), TODAY, KNOWN_CODES);
     assert.deepEqual(result.states, sanitizeStates(states, TODAY));
   });
 });

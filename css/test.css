@@ -6,6 +6,12 @@
  * uses the accent.
  */
 
+/* What sits above the question's flag: the bar (css/question.css sizes a
+   typing flag from it). */
+.view-test {
+  --question-chrome-top: 3.25rem;
+}
+
 /* ---- Test: scope picker ---- */
 
 .view-test .test-intro {

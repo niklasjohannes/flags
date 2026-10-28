@@ -73,7 +73,8 @@ export const REQUEUE_GAP = 3;
 
 /**
  * Maximum number of never-seen flags that compete with due flags in a round.
- * More are only added when nothing else in scope can fill the round.
+ * When due flags and this trickle cannot fill the round, more never-seen
+ * flags fill it (see `pickRound`).
  */
 export const NEW_FLAG_LIMIT = 3;
 
@@ -448,9 +449,13 @@ function classifyScope(states, countries, today, region) {
  *   1. every due flag in scope (`dueDate <= today`), weighted by days overdue
  *      and difficulty (low ease, many lapses), plus up to `NEW_FLAG_LIMIT`
  *      randomly chosen never-seen flags at `NEW_FLAG_WEIGHT`;
- *   2. if tier 1 cannot fill the round, seen flags that are not yet due,
- *      with a small non-zero weight favouring harder and closer-to-due flags;
- *   3. if that still cannot fill it, further never-seen flags at random.
+ *   2. if tier 1 cannot fill the round, further never-seen flags at random
+ *      (owner decision on GitHub #32: new flags before re-using flags that
+ *      are not due yet, so Keep going on day 1 shows new flags instead of
+ *      the ones just answered);
+ *   3. only once the scope has no never-seen flags left, seen flags that are
+ *      not yet due, with a small non-zero weight favouring harder and
+ *      closer-to-due flags.
  * Each tier is a weighted random draw without replacement; the final round is
  * shuffled so the tiers are interleaved.
  *
@@ -490,13 +495,13 @@ export function pickRound({ states, countries, today, region, rng, n = ROUND_SIZ
   ];
   const picked = sampleWeighted(tierOne, n, rng);
 
-  const tierTwo = notYetDue.map(({ code, state }) => ({
+  picked.push(...overflow.slice(0, n - picked.length));
+
+  const tierThree = notYetDue.map(({ code, state }) => ({
     code,
     weight: notYetDueWeight(state, today)
   }));
-  picked.push(...sampleWeighted(tierTwo, n - picked.length, rng));
-
-  picked.push(...overflow.slice(0, n - picked.length));
+  picked.push(...sampleWeighted(tierThree, n - picked.length, rng));
 
   return shuffle(picked, rng);
 }

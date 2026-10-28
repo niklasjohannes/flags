@@ -351,7 +351,7 @@ describe('pickRound', () => {
     assert.deepEqual([...oceania].sort(), ['oc0', 'oc1', 'oc2', 'oc3', 'oc4']);
   });
 
-  it(`caps the never-seen trickle at ${NEW_FLAG_LIMIT} when other flags can fill the round`, () => {
+  it('fills a short round with never-seen flags before not-yet-due ones (GitHub #32)', () => {
     const due = makeCountries('due', 5);
     const later = makeCountries('later', 20);
     const fresh = makeCountries('new', 100);
@@ -363,10 +363,28 @@ describe('pickRound', () => {
     for (let seed = 1; seed <= 200; seed += 1) {
       const round = pickRound({ states, countries, today: TODAY, rng: createRng(seed) });
       // Tier 1 (5 due + 3 trickle) is smaller than the round, so all of it is
-      // picked and the rest comes from not-yet-due seen flags.
-      assert.equal(round.filter((code) => code.startsWith('new')).length, NEW_FLAG_LIMIT);
+      // picked and the rest comes from further never-seen flags, not from the
+      // not-yet-due seen ones.
       assert.equal(round.filter((code) => code.startsWith('due')).length, 5);
-      assert.equal(round.filter((code) => code.startsWith('later')).length, ROUND_SIZE - 5 - NEW_FLAG_LIMIT);
+      assert.equal(round.filter((code) => code.startsWith('new')).length, ROUND_SIZE - 5);
+      assert.equal(round.filter((code) => code.startsWith('later')).length, 0);
+    }
+  });
+
+  it('falls back to not-yet-due flags only once the scope has no never-seen flags left', () => {
+    const due = makeCountries('due', 2);
+    const later = makeCountries('later', 20);
+    const fresh = makeCountries('new', 4);
+    const countries = [...due, ...later, ...fresh];
+    const states = toStates([
+      ...due.map((c) => makeState(c.code)),
+      ...later.map((c) => makeState(c.code, { dueDate: '2026-04-10' }))
+    ]);
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const round = pickRound({ states, countries, today: TODAY, rng: createRng(seed) });
+      assert.equal(round.filter((code) => code.startsWith('due')).length, 2);
+      assert.equal(round.filter((code) => code.startsWith('new')).length, 4);
+      assert.equal(round.filter((code) => code.startsWith('later')).length, ROUND_SIZE - 6);
     }
   });
 
