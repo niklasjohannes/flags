@@ -113,7 +113,9 @@ export function renderQuestion(container, options) {
       enterkeyhint: 'done'
     });
     const list = el('ul', { class: 'question-suggestions', 'aria-label': 'Suggestions' });
-    answerLine = el('p', { class: 'question-answer', hidden: true });
+    // Empty until `reveal()`; a live region, so the name is announced. It stays
+    // in the layout (not `hidden`) so screen readers track it from the start.
+    answerLine = el('p', { class: 'question-answer', 'aria-live': 'polite' });
     input.addEventListener('input', () => {
       if (isLocked) {
         return;
@@ -123,9 +125,11 @@ export function renderQuestion(container, options) {
         (suggestion) => el('li', {}, [createOption(suggestion.code, 'question-suggestion')])
       ));
     }, { signal });
-    // No raw-text answers: Enter does nothing.
+    // No raw-text answers: Enter does nothing. Except while an IME is
+    // composing (Japanese, Chinese, ...), where Enter commits the composition;
+    // Safari reports that as `keyCode` 229 rather than `isComposing`.
     input.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
+      if (event.key === 'Enter' && !event.isComposing && event.keyCode !== 229) {
         event.preventDefault();
       }
     }, { signal });
@@ -171,7 +175,6 @@ export function renderQuestion(container, options) {
     }
     if (answerLine !== null) {
       answerLine.textContent = target.name;
-      answerLine.hidden = false;
     }
   }
 

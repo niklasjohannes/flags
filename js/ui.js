@@ -38,7 +38,9 @@ const ALLOWED_TAGS = new Set([
   'label', 'legend', 'li', 'ol', 'p', 'section', 'small', 'span', 'strong',
   'ul'
 ]);
-const FORBIDDEN_ATTRIBUTES = new Set(['style', 'srcdoc']);
+// `srcset` is refused outright: the app never uses it, and its URL list is
+// harder to vet than a single URL.
+const FORBIDDEN_ATTRIBUTES = new Set(['style', 'srcdoc', 'srcset']);
 const URL_ATTRIBUTES = new Set(['href', 'src', 'action', 'formaction']);
 const FLAG_CODE_PATTERN = /^[a-z]{2}$/;
 
@@ -68,7 +70,8 @@ function isSafeUrl(value) {
  * @param {Object<string, string | number | boolean | null | undefined>}
  *   [attrs={}] Attributes. `true` sets an empty (boolean) attribute;
  *   `false`, `null` and `undefined` skip it. `on*` and `style` are refused:
- *   use `addEventListener` and CSS classes. `href`, `src`, `action` and
+ *   use `addEventListener` and CSS classes; `srcdoc` and `srcset` are refused
+ *   too. `href`, `src`, `action` and
  *   `formaction` must be relative paths or `#fragment`s.
  * @param {Array<Node | string | number | null | undefined | false>}
  *   [children=[]] Child nodes. Strings and numbers become text nodes;

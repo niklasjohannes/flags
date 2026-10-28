@@ -38,8 +38,8 @@ describe('el rejects', () => {
     assert.throws(() => el(42), TypeError);
   });
 
-  it('inline event handlers and style attributes', () => {
-    for (const name of ['onclick', 'onError', 'ONLOAD', 'style', 'srcdoc']) {
+  it('inline event handlers, style, srcdoc and srcset', () => {
+    for (const name of ['onclick', 'onError', 'ONLOAD', 'style', 'srcdoc', 'srcset', 'SRCSET']) {
       assert.throws(() => el('div', { [name]: 'x' }), RangeError, name);
     }
   });

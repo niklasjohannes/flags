@@ -17,6 +17,12 @@ const MODE_CHOICES = Object.freeze(
   Object.entries(MODE_LABELS).map(([value, label]) => ({ value, label }))
 );
 
+/**
+ * Time away from the app (ms) after which coming back to home counts as a
+ * fresh open. A change of local date always does.
+ */
+export const RESUME_RESET_MS = 30 * 60_000;
+
 // Module state lives for one page load: the filter survives a trip to
 // practice and back, but every reload starts at "All" because it is never
 // stored (PLAN decision 2). The mode is also kept here, so it survives a trip
@@ -24,6 +30,22 @@ const MODE_CHOICES = Object.freeze(
 let selectedRegion = null;
 let selectedMode = null;
 let controller = null;
+
+// Selector for the focused control inside `container`, to focus the same
+// control after a re-render (the router would otherwise focus the section).
+function describeFocus(container) {
+  const active = document.activeElement;
+  if (active === null || active === container || !container.contains(active)) {
+    return null;
+  }
+  if (active instanceof HTMLInputElement) {
+    return `input[name="${CSS.escape(active.name)}"][value="${CSS.escape(active.value)}"]`;
+  }
+  if (active.dataset.action !== undefined) {
+    return `[data-action="${CSS.escape(active.dataset.action)}"]`;
+  }
+  return null;
+}
 
 /**
  * Render the home screen.
@@ -37,30 +59,44 @@ export function mount(container, context) {
   const { signal } = controller;
   const { countries, navigate } = context;
 
-  // iOS resumes an installed app from the background without reloading. Treat
-  // a resume on home like a fresh open: new `today`, filter back to All. This
-  // listener only exists while home is mounted, so a round or test in
-  // progress is never interrupted.
-  const reopen = () => {
-    selectedRegion = null;
-    unmount();
-    mount(container, context);
-  };
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      reopen();
-    }
-  }, { signal });
-  window.addEventListener('pageshow', (event) => {
-    if (event.persisted) {
-      reopen();
-    }
-  }, { signal });
-
   // Read once per visit, so the count reflects answers saved by practice.
   const today = localToday();
   const states = loadStates(today);
   selectedMode ??= loadMode();
+
+  // iOS resumes an installed app from the background without reloading. If
+  // the date changed or the user was away for `RESUME_RESET_MS`, treat the
+  // return like a fresh open: new `today`, filter back to All. A quick glance
+  // at another app keeps the filter. These listeners only exist while home is
+  // mounted, so a round or test in progress is never interrupted.
+  let hiddenAt = null;
+  const reopenIfStale = () => {
+    const isStale = localToday() !== today ||
+      (hiddenAt !== null && Date.now() - hiddenAt >= RESUME_RESET_MS);
+    hiddenAt = null;
+    if (!isStale) {
+      return;
+    }
+    const focusSelector = describeFocus(container);
+    selectedRegion = null;
+    // Through the router, so a failing mount gets its error state.
+    navigate('home');
+    if (focusSelector !== null) {
+      container.querySelector(focusSelector)?.focus({ preventScroll: true });
+    }
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      hiddenAt = Date.now();
+    } else {
+      reopenIfStale();
+    }
+  }, { signal });
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+      reopenIfStale();
+    }
+  }, { signal });
 
   const countNumber = el('span', { class: 'due-number' });
   const countLabel = el('span', { class: 'due-label' });
@@ -95,8 +131,8 @@ export function mount(container, context) {
     }
   });
 
-  const startButton = el('button', { type: 'button', class: 'button button-primary' }, ['Start']);
-  const testButton = el('button', { type: 'button', class: 'button button-secondary' }, ['Test']);
+  const startButton = el('button', { type: 'button', class: 'button button-primary', 'data-action': 'start' }, ['Start']);
+  const testButton = el('button', { type: 'button', class: 'button button-secondary', 'data-action': 'test' }, ['Test']);
   startButton.addEventListener('click', () => navigate('practice', { region: selectedRegion, mode: selectedMode }), { signal });
   testButton.addEventListener('click', () => navigate('test', { region: selectedRegion, mode: selectedMode }), { signal });
 
