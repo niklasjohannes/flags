@@ -1,0 +1,5 @@
+/*
+ * Test and results views (spec #6, owned by issue-6-test-mode). Scope every
+ * rule under `.view-test` or `.view-results`. Base tokens and shared controls
+ * (`.button`, `.choice-group`) are in css/style.css.
+ */
