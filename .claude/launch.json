@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "flags-static",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8004"],
+      "runtimeExecutable": "/usr/bin/python3",
+      "runtimeArgs": ["scripts/dev_server.py", "8004"],
       "port": 8004
     }
   ]
