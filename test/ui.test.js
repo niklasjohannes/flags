@@ -1,7 +1,7 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { MODE_LABELS, REGION_LABELS, el, formatRegion } from '../js/ui.js';
+import { MODE_LABELS, REGION_LABELS, createChoiceGroup, el, formatRegion } from '../js/ui.js';
 import { REGIONS } from '../js/srs.js';
 import { QUIZ_MODES } from '../js/storage.js';
 
@@ -97,6 +97,10 @@ describe('el builds', () => {
     assert.deepEqual([...node.attributes], [['type', 'radio'], ['checked', ''], ['value', '3']]);
   });
 
+  it('a `dialog` (the in-app confirm sheet)', () => {
+    assert.equal(el('dialog', { 'aria-labelledby': 'x' }).tag, 'dialog');
+  });
+
   it('relative and fragment URLs', () => {
     for (const value of ['flags/fr.svg', './flags/fr.svg', '../x', '#main', 'a/b:c']) {
       assert.equal(el('img', { src: value }).attributes.get('src'), value);
@@ -124,3 +128,25 @@ describe('labels', () => {
     assert.throws(() => formatRegion(undefined), RangeError);
   });
 });
+
+// ---- createChoiceGroup: validation (no DOM needed) ----
+
+describe('createChoiceGroup rejects', () => {
+  const valid = {
+    name: 'g',
+    legend: 'Group',
+    choices: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }],
+    selected: 'a',
+    onChange: () => {}
+  };
+
+  it('an unknown `variant`', () => {
+    assert.throws(() => createChoiceGroup({ ...valid, variant: 'tabs' }), RangeError);
+    assert.throws(() => createChoiceGroup({ ...valid, variant: '' }), RangeError);
+  });
+
+  it('a `selected` value that is not one of `choices`', () => {
+    assert.throws(() => createChoiceGroup({ ...valid, selected: 'c' }), RangeError);
+  });
+});
+

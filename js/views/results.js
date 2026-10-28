@@ -57,7 +57,7 @@ export function mount(container, context) {
   doneButton.addEventListener('click', () => navigate('home'), { signal });
 
   const missedSection = score.missed.length === 0
-    ? el('p', { class: 'results-none' }, ['No misses.'])
+    ? el('p', { class: 'results-none' }, ['No misses. Every flag right.'])
     : el('section', { class: 'results-missed', 'aria-labelledby': 'results-missed-title' }, [
       el('h2', { id: 'results-missed-title', class: 'results-missed-title' }, [`Missed (${score.missed.length})`]),
       el('ul', { class: 'results-list' }, score.missed.map(renderMiss))
@@ -66,9 +66,10 @@ export function mount(container, context) {
   container.replaceChildren(
     el('h1', {}, ['Results']),
     el('p', { class: 'results-scope' }, [`${formatRegion(pass.region)} · ${MODE_LABELS[mode]}`]),
-    el('p', { class: 'results-score' }, [formatScore(score)]),
+    el('p', { class: 'score-caption' }, ['Correct']),
+    el('p', { class: 'score results-score' }, [formatScore(score)]),
     missedSection,
-    el('div', { class: 'results-actions' }, [retakeButton, doneButton])
+    el('div', { class: 'view-actions results-actions' }, [retakeButton, doneButton])
   );
 }
 

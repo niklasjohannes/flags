@@ -7,6 +7,11 @@
 //
 // `params`: `{ region, mode }` from home (see the view contract in
 // js/app.js); results' Retake adds `autostart: true` to skip the picker.
+//
+// Exit asks first, in an in-app sheet (a modal `<dialog>`: focus stays inside
+// it, Escape or Cancel closes it), never `window.confirm`: a browser that
+// was told to block further dialogs answers `false` forever, and the native
+// dialog is titled with the page's origin.
 
 import { renderQuestion } from '../question.js';
 import { REGIONS } from '../srs.js';
@@ -16,7 +21,8 @@ import { ALL_REGIONS_LABEL, MODE_LABELS, REGION_LABELS, createChoiceGroup, el } 
 // Radio value of "All"; maps to `region: null` everywhere else.
 const ALL_VALUE = 'all';
 
-const EXIT_MESSAGE = 'Leave this test? Your answers so far will not be kept.';
+const EXIT_TITLE = 'Leave this test?';
+const EXIT_MESSAGE = 'Your answers so far will not be kept.';
 
 /**
  * Time (ms) after a question appears during which clicks on it are ignored.
@@ -91,20 +97,88 @@ function showPicker(container, { countries, navigate, region, mode, signal }) {
       ' ',
       el('span', {}, [MODE_LABELS[mode]])
     ]),
-    el('div', { class: 'test-actions' }, [startButton, backButton])
+    el('div', { class: 'view-actions test-actions' }, [startButton, backButton])
   );
+}
+
+// The "leave this test?" sheet. `open()` shows it modally; Leave closes it
+// and calls `onLeave`; Cancel, Escape or a tap on the backdrop just close it
+// and focus again whatever had focus when it opened (usually Exit itself;
+// the input, when Exit was tapped on iOS while typing), if still on screen.
+function createExitSheet({ onLeave, signal }) {
+  const leaveButton = el('button', { type: 'button', class: 'button button-primary', 'data-action': 'leave' }, ['Leave test']);
+  const cancelButton = el('button', {
+    type: 'button',
+    class: 'button button-secondary',
+    'data-action': 'cancel',
+    autofocus: true
+  }, ['Cancel']);
+  const dialog = el('dialog', {
+    class: 'sheet test-exit-sheet',
+    'aria-labelledby': 'test-exit-title',
+    'aria-describedby': 'test-exit-text'
+  }, [
+    el('div', { class: 'sheet-body' }, [
+      el('h2', { id: 'test-exit-title', class: 'sheet-title' }, [EXIT_TITLE]),
+      el('p', { id: 'test-exit-text', class: 'sheet-text' }, [EXIT_MESSAGE]),
+      el('div', { class: 'sheet-actions' }, [leaveButton, cancelButton])
+    ])
+  ]);
+
+  let returnFocusTo = null;
+  // Run from the Cancel / backdrop tap itself: if the input had focus, it is
+  // refocused inside the tap, the only place iOS lets `focus()` bring the
+  // keyboard back. Escape closes without a tap, so this also runs on `close`
+  // (a no-op after a tap, since `returnFocusTo` is cleared).
+  const restoreFocus = () => {
+    const target = returnFocusTo;
+    returnFocusTo = null;
+    if (target !== null && target.isConnected) {
+      target.focus({ preventScroll: true });
+    }
+  };
+  const close = () => {
+    if (dialog.open) {
+      dialog.close();
+    }
+    restoreFocus();
+  };
+  dialog.addEventListener('close', restoreFocus, { signal });
+  cancelButton.addEventListener('click', close, { signal });
+  leaveButton.addEventListener('click', () => {
+    returnFocusTo = null;
+    dialog.close();
+    onLeave();
+  }, { signal });
+  // `.sheet-body` fills the dialog, so a click on the dialog itself is a
+  // click on the backdrop.
+  dialog.addEventListener('click', (event) => {
+    if (event.target === dialog) {
+      close();
+    }
+  }, { signal });
+
+  const open = () => {
+    if (dialog.open) {
+      return;
+    }
+    returnFocusTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    dialog.showModal();
+  };
+  return { dialog, open };
 }
 
 function startPass(container, { countries, navigate, region, mode, signal }) {
   let pass = createTestPass({ countries, region, rng: Math.random });
 
-  const counter = el('p', { class: 'test-counter' });
-  const exitButton = el('button', { type: 'button', class: 'test-exit' }, ['Exit']);
-  exitButton.addEventListener('click', () => {
-    if (window.confirm(EXIT_MESSAGE)) {
-      navigate('home');
-    }
-  }, { signal });
+  const counter = el('p', { class: 'view-counter test-counter' });
+  const exitSheet = createExitSheet({ onLeave: () => navigate('home'), signal });
+  const exitButton = el('button', {
+    type: 'button',
+    class: 'button-quiet test-exit',
+    'aria-haspopup': 'dialog'
+  }, ['Exit']);
+  exitButton.addEventListener('click', exitSheet.open, { signal });
   const stage = el('div', { class: 'test-question' });
 
   // Both in the capture phase, so they run before the options' own listeners.
@@ -125,8 +199,9 @@ function startPass(container, { countries, navigate, region, mode, signal }) {
   }, { capture: true, signal });
 
   container.replaceChildren(
-    el('div', { class: 'test-bar' }, [counter, exitButton]),
-    stage
+    el('div', { class: 'view-bar test-bar' }, [exitButton, counter]),
+    stage,
+    exitSheet.dialog
   );
 
   const showQuestion = () => {

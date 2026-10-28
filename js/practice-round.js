@@ -164,12 +164,15 @@ export function getProgress(round) {
  * The round's score: first answers only.
  *
  * @param {object} round A round from `createRound`.
- * @returns {{ correct: number, total: number }}
+ * @returns {{ correct: number, total: number, percent: number }} `percent`
+ *   is rounded down, like test results (`scorePass` in js/test-pass.js), so
+ *   both format the same way with `formatScore`.
  */
 export function getScore(round) {
   assertRound(round);
   const correct = Object.values(round.results).filter(Boolean).length;
-  return { correct, total: round.total };
+  const { total } = round;
+  return { correct, total, percent: total === 0 ? 0 : Math.floor((correct * 100) / total) };
 }
 
 /**
