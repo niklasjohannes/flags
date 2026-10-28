@@ -89,6 +89,13 @@ describe('sw.js', () => {
     assert.match(SW_SOURCE, /cache\.put\(url\.href, /);
   });
 
+  it('copies only `Content-Type` onto the cached copy (no encoding or length)', () => {
+    const put = SW_SOURCE.slice(SW_SOURCE.indexOf('await cache.put(url.href'), SW_SOURCE.indexOf('}));', SW_SOURCE.indexOf('await cache.put(url.href')));
+    assert.match(put, /headers: \{ 'Content-Type': getContentType\(response, url\) \}/);
+    assert.doesNotMatch(put, /response\.headers|statusText/);
+    assert.doesNotMatch(SW_SOURCE, /headers: response\.headers/);
+  });
+
   it('reads only its own cache in the fetch path (never `caches.open` there)', () => {
     const respond = SW_SOURCE.slice(SW_SOURCE.indexOf('async function respond('), SW_SOURCE.indexOf("self.addEventListener('install'"));
     assert.doesNotMatch(respond, /caches\.open/);

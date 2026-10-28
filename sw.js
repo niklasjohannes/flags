@@ -311,6 +311,26 @@ function isCacheable(response) {
   return response.ok && response.type === 'basic' && !response.redirected;
 }
 
+// Content types by extension, for a response that arrives without one.
+const CONTENT_TYPES = Object.freeze({
+  '.css': 'text/css',
+  '.html': 'text/html',
+  '.js': 'text/javascript',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json'
+});
+
+function getContentType(response, url) {
+  const header = response.headers.get('Content-Type');
+  if (header !== null && header !== '') {
+    return header;
+  }
+  const extension = url.pathname.match(/\.[a-z]+$/)?.[0] ?? '';
+  return CONTENT_TYPES[extension] ?? 'application/octet-stream';
+}
+
 function toHex(buffer) {
   return [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -334,11 +354,14 @@ async function precache() {
     if (digest !== sha256) {
       throw new Error(`Precaching ${path} failed: its content does not match this version (stale copy?).`);
     }
-    // A fresh Response, so the cached one carries no `?v=` URL.
+    // A fresh Response, so the cached one carries no `?v=` URL. Only
+    // `Content-Type` is copied: `body` is the decoded bytes, while Pages
+    // serves gzip, so its `Content-Encoding` and (compressed)
+    // `Content-Length` would describe a different body, which WebKit has
+    // mishandled in cached responses (truncation, decode errors).
     await cache.put(url.href, new Response(body, {
       status: response.status,
-      statusText: response.statusText,
-      headers: response.headers
+      headers: { 'Content-Type': getContentType(response, url) }
     }));
   }));
 }

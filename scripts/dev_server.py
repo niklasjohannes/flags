@@ -8,13 +8,16 @@ sends ``Cache-Control: no-store``, so every reload picks up edited files.
 
 Usage::
 
-    /usr/bin/python3 /absolute/path/to/scripts/dev_server.py [PORT] [--base /flags/]
+    /usr/bin/python3 /absolute/path/to/scripts/dev_server.py [PORT] [--base /flags/] [--gzip]
 
 ``PORT`` defaults to 8004. ``--base`` serves the repo under that path prefix
 instead of ``/``, exactly as GitHub Pages serves this project site
 (``/flags/``), so the manifest's ``start_url``/``scope`` and the service
 worker's scope can be checked as they will be live. Then ``/flags`` redirects
 to ``/flags/`` (as Pages does) and anything outside the prefix is a 404.
+``--gzip`` gzips file responses for clients that accept it, with
+``Content-Encoding: gzip`` and the compressed ``Content-Length``, as Pages'
+CDN does, so code that re-wraps fetched bodies can be checked against it.
 Python standard library only, 3.9+.
 """
 
@@ -22,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import functools
+import gzip
 import os
 import re
 import sys
@@ -58,8 +62,9 @@ class NoStoreHandler(SimpleHTTPRequestHandler):
         '.webmanifest': 'application/manifest+json',
     }
 
-    def __init__(self, *args, base: str = DEFAULT_BASE, **kwargs) -> None:
+    def __init__(self, *args, base: str = DEFAULT_BASE, use_gzip: bool = False, **kwargs) -> None:
         self.base = base
+        self.use_gzip = use_gzip
         super().__init__(*args, **kwargs)
 
     def end_headers(self) -> None:
@@ -67,8 +72,29 @@ class NoStoreHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self) -> None:
-        if self.route():
+        if self.route() and not self.send_gzipped():
             super().do_GET()
+
+    def send_gzipped(self) -> bool:
+        """Send the file gzipped if enabled and accepted; ``True`` if sent."""
+        if not self.use_gzip or 'gzip' not in self.headers.get('Accept-Encoding', ''):
+            return False
+        path = self.translate_path(urlsplit(self.path).path)
+        if os.path.isdir(path):
+            if not urlsplit(self.path).path.endswith('/'):
+                return False
+            path = os.path.join(path, 'index.html')
+        if not os.path.isfile(path):
+            return False
+        with open(path, 'rb') as file:
+            body = gzip.compress(file.read(), mtime=0)
+        self.send_response(HTTPStatus.OK)
+        self.send_header('Content-Type', self.guess_type(path))
+        self.send_header('Content-Encoding', 'gzip')
+        self.send_header('Content-Length', str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+        return True
 
     def do_HEAD(self) -> None:
         if self.route():
@@ -106,12 +132,13 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     Returns
     -------
     argparse.Namespace
-        ``port`` (``DEFAULT_PORT`` if none is given) and ``base`` (starts and
-        ends with ``/``; ``DEFAULT_BASE`` if none is given).
+        ``port`` (``DEFAULT_PORT`` if none is given), ``base`` (starts and
+        ends with ``/``; ``DEFAULT_BASE`` if none is given) and ``gzip``.
     """
     parser = argparse.ArgumentParser(prog='dev_server.py', description='Serve the app locally.')
     parser.add_argument('port', nargs='?', default=DEFAULT_PORT, help=f'TCP port (default {DEFAULT_PORT}).')
     parser.add_argument('--base', default=DEFAULT_BASE, help='Path prefix to serve under, e.g. /flags/ (default /).')
+    parser.add_argument('--gzip', action='store_true', help='Gzip file responses, as the GitHub Pages CDN does.')
     args = parser.parse_args(argv)
     try:
         args.port = int(args.port)
@@ -126,7 +153,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return args
 
 
-def serve(port: int, base: str = DEFAULT_BASE) -> None:
+def serve(port: int, base: str = DEFAULT_BASE, use_gzip: bool = False) -> None:
     """Serve ``ROOT`` on ``HOST:port`` under ``base`` until interrupted.
 
     Parameters
@@ -135,12 +162,14 @@ def serve(port: int, base: str = DEFAULT_BASE) -> None:
         TCP port to listen on.
     base
         Path prefix, starting and ending with ``/``.
+    use_gzip
+        Gzip file responses for clients that accept it.
 
     Returns
     -------
     None
     """
-    handler = functools.partial(NoStoreHandler, directory=ROOT, base=base)
+    handler = functools.partial(NoStoreHandler, directory=ROOT, base=base, use_gzip=use_gzip)
     with ThreadingHTTPServer((HOST, port), handler) as server:
         print(f'Serving {ROOT} at http://{HOST}:{port}{base}', flush=True)
         try:
@@ -151,4 +180,4 @@ def serve(port: int, base: str = DEFAULT_BASE) -> None:
 
 if __name__ == '__main__':
     arguments = parse_args(sys.argv[1:])
-    serve(arguments.port, arguments.base)
+    serve(arguments.port, arguments.base, arguments.gzip)
