@@ -192,7 +192,9 @@ export function mount(container, context) {
       );
       return;
     }
-    container.replaceChildren(header, questionArea, feedback, actions);
+    // The verdict sits above the question, so a miss reads "✕ Not quite",
+    // then the marked answers (and the name, in typing mode) below it.
+    container.replaceChildren(header, feedback, questionArea, actions);
     showQuestion();
   }
 

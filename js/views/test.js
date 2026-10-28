@@ -103,7 +103,8 @@ function showPicker(container, { countries, navigate, region, mode, signal }) {
 
 // The "leave this test?" sheet. `open()` shows it modally; Leave closes it
 // and calls `onLeave`; Cancel, Escape or a tap on the backdrop just close it
-// and put focus back where it was (the question).
+// and focus again whatever had focus when it opened (usually Exit itself;
+// the input, when Exit was tapped on iOS while typing), if still on screen.
 function createExitSheet({ onLeave, signal }) {
   const leaveButton = el('button', { type: 'button', class: 'button button-primary', 'data-action': 'leave' }, ['Leave test']);
   const cancelButton = el('button', {
@@ -125,8 +126,10 @@ function createExitSheet({ onLeave, signal }) {
   ]);
 
   let returnFocusTo = null;
-  // Synchronous, so focus returns inside the tap (iOS reopens the keyboard
-  // only then). Also runs on `close`, for Escape.
+  // Run from the Cancel / backdrop tap itself: if the input had focus, it is
+  // refocused inside the tap, the only place iOS lets `focus()` bring the
+  // keyboard back. Escape closes without a tap, so this also runs on `close`
+  // (a no-op after a tap, since `returnFocusTo` is cleared).
   const restoreFocus = () => {
     const target = returnFocusTo;
     returnFocusTo = null;

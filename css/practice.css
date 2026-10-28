@@ -6,12 +6,12 @@
  * correct answer, a miss is black text with a cross. No red/green.
  */
 
-/* ---- Feedback ---- */
+/* ---- Feedback (the verdict line, above the question) ---- */
 
 .view-practice .practice-feedback {
   /* Reserve the line, so revealing feedback never shifts the layout. */
   min-height: 1.5em;
-  margin: var(--space-4) 0 0;
+  margin: 0 0 var(--space-3);
   font-weight: 600;
 }
 
@@ -38,4 +38,9 @@
 
 .view-practice .practice-summary-title {
   margin-bottom: var(--space-8);
+}
+
+/* The verdict line below spaces the bar from the flag. */
+.view-practice .practice-header {
+  margin-bottom: 0;
 }

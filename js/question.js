@@ -26,12 +26,36 @@ import { el, renderFlag } from './ui.js';
 // mode, the parts kept for the next question.
 const previousByContainer = new WeakMap();
 
+// End an IME composition still open in a typing question's input. Clearing
+// `value` alone does not: the IME keeps its buffer and types it back on the
+// next keystroke ("germ" + "a" → "germa" in the next question). A blur
+// commits the composition; the input is focused again straight away. Only
+// while composing, so the iOS keyboard is otherwise never touched.
+function endComposition(typing) {
+  if (!typing.isComposing) {
+    return;
+  }
+  const { input } = typing;
+  const hadFocus = document.activeElement === input;
+  input.blur();
+  typing.isComposing = false;
+  if (hadFocus) {
+    input.focus({ preventScroll: true });
+  }
+}
+
 function isPlainObject(value) {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 /**
- * Render a question into `container`, replacing its contents.
+ * Render a question into `container`.
+ *
+ * The caller must own `container` exclusively: put nothing else in it. A
+ * first render replaces its contents. A typing question rendered after a
+ * typing question in the same container reuses the previous question's
+ * elements in place (to keep the input and its focus) and leaves any other
+ * children untouched.
  *
  * @param {HTMLElement} container Where to render.
  * @param {object} options
@@ -137,6 +161,7 @@ export function renderQuestion(container, options) {
     typing = previousTyping;
     ({ root, frame } = typing);
     root.classList.remove('is-answered-correct', 'is-answered-wrong');
+    endComposition(typing);
     typing.input.value = '';
     typing.input.readOnly = false;
     typing.list.replaceChildren();
@@ -168,7 +193,16 @@ export function renderQuestion(container, options) {
       // start.
       const answerLine = el('p', { class: 'question-answer', 'aria-live': 'polite' });
       body = el('div', { class: 'question-typing' }, [input, list, answerLine]);
-      typing = { input, list, answerLine };
+      typing = { input, list, answerLine, isComposing: false };
+      // Tracked for the input's whole life (across questions), so a question
+      // can end a composition the previous one left open.
+      const state = typing;
+      input.addEventListener('compositionstart', () => {
+        state.isComposing = true;
+      }, { signal });
+      input.addEventListener('compositionend', () => {
+        state.isComposing = false;
+      }, { signal });
     }
     root = el('div', { class: 'question', 'data-mode': mode }, [frame, body]);
     if (typing !== null) {
@@ -218,6 +252,12 @@ export function renderQuestion(container, options) {
       return;
     }
     chosenCode = optionCode;
+    // Locked first, so the `input` event of the committed text cannot rebuild
+    // the suggestions. Inside the tap, so iOS allows the refocus.
+    isLocked = true;
+    if (typing !== null) {
+      endComposition(typing);
+    }
     lock();
     buttons.get(optionCode)?.classList.add('is-chosen');
     onAnswer(optionCode);
