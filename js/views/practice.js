@@ -26,7 +26,7 @@ import {
   isRoundComplete,
   recordAnswer
 } from '../practice-round.js';
-import { renderQuestion } from '../question.js';
+import { guardQuestionArea, renderQuestion } from '../question.js';
 import { ROUND_SIZE, pickRound } from '../srs.js';
 import { loadStates, localToday, saveStates } from '../storage.js';
 import { formatScore } from '../test-pass.js';
@@ -35,11 +35,9 @@ import { el } from '../ui.js';
 /** Delay (ms) between revealing a correct answer and the next question. */
 export const CORRECT_ADVANCE_MS = 700;
 
-/**
- * Clicks on a new question are ignored for this long (ms), so a double press
- * of Enter or a double tap on Next cannot answer the next question.
- */
-export const ANSWER_GUARD_MS = 300;
+// Clicks on a new question are ignored for this long (ms), so a double press
+// of Enter or a double tap on Next cannot answer the next question.
+export { ANSWER_GUARD_MS } from '../question.js';
 
 let controller = null;
 
@@ -79,15 +77,9 @@ export function mount(container, context) {
   let question = null;
   let persistedCodes = new Set();
 
-  // Swallow clicks (including Enter / Space activations) on the question
-  // just after it appears, before they reach its buttons.
-  let guardUntil = 0;
-  questionArea.addEventListener('click', (event) => {
-    if (performance.now() < guardUntil) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
-  }, { capture: true, signal });
+  // Swallow clicks on the question just after it appears, and a held Enter
+  // on Next or Keep going repeating onto its first option.
+  const guard = guardQuestionArea(questionArea, { signal });
 
   function showSummary() {
     const score = getScore(round);
@@ -123,7 +115,7 @@ export function mount(container, context) {
       signal,
       onAnswer: (chosenCode) => handleAnswer(chosenCode === code)
     });
-    guardUntil = performance.now() + ANSWER_GUARD_MS;
+    guard.arm();
     question.focus();
   }
 

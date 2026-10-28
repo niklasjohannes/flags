@@ -45,6 +45,33 @@
   animation: question-pulse var(--pulse-duration) ease-out;
 }
 
+/*
+ * Typing mode and the on-screen keyboard (GitHub #31). iOS does not resize
+ * the layout for the keyboard, so the flag at its full height pushes all
+ * but one suggestion row under it. js/app.js sets `--viewport-height` from
+ * `visualViewport` (the part of the screen the keyboard leaves), and the
+ * flag gets what is left there after the view's chrome above it
+ * (`--question-chrome-top`, set per view), the input and
+ * `--typing-visible-rows` suggestion rows. With no keyboard that is more
+ * than the usual 45dvh cap, so nothing changes. `--viewport-height` is
+ * unset without `visualViewport`, and the flag then keeps its usual size.
+ */
+.question[data-mode="typing"] {
+  --typing-visible-rows: 3;
+  --typing-reserve: calc(
+    max(var(--gutter), env(safe-area-inset-top)) +
+    var(--question-chrome-top, 0px) +
+    var(--space-4) + 3.25rem + var(--space-3) +
+    var(--typing-visible-rows) * (var(--suggestion-height) + var(--space-2))
+  );
+}
+
+.question[data-mode="typing"] .question-flag {
+  max-width: calc(
+    min(45dvh, max(5rem, var(--viewport-height, 100dvh) - var(--typing-reserve))) * 4 / 3
+  );
+}
+
 /* ---- Options (multiple choice) and suggestions (typing) ---- */
 
 .question-options,
@@ -54,6 +81,12 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.question {
+  /* 44px, Apple's minimum tap size: denser than the options, so more rows
+     fit above the keyboard. */
+  --suggestion-height: 2.75rem;
 }
 
 .question-option,
@@ -71,6 +104,11 @@
   text-align: left;
   cursor: pointer;
   touch-action: manipulation;
+}
+
+.question-suggestion {
+  min-height: var(--suggestion-height);
+  padding-block: var(--space-2);
 }
 
 .question-option:disabled,

@@ -4,6 +4,7 @@
 // which opens js/backup-sheet.js.
 
 import { createBackupSheet } from '../backup-sheet.js';
+import { takeStaleResume } from '../resume.js';
 import { REGIONS, countDue } from '../srs.js';
 import { loadMode, loadStates, localToday, saveMode } from '../storage.js';
 import { ALL_REGIONS_LABEL, MODE_LABELS, REGION_LABELS, createChoiceGroup, el } from '../ui.js';
@@ -20,11 +21,8 @@ const MODE_CHOICES = Object.freeze(
   Object.entries(MODE_LABELS).map(([value, label]) => ({ value, label }))
 );
 
-/**
- * Time away from the app (ms) after which coming back to home counts as a
- * fresh open. A change of local date always does.
- */
-export const RESUME_RESET_MS = 30 * 60_000;
+// Re-exported: it used to live here.
+export { RESUME_RESET_MS } from '../resume.js';
 
 // Module state lives for one page load: the filter survives a trip to
 // practice and back, but every reload starts at "All" because it is never
@@ -68,16 +66,18 @@ export function mount(container, context) {
   selectedMode ??= loadMode();
 
   // iOS resumes an installed app from the background without reloading. If
-  // the date changed or the user was away for `RESUME_RESET_MS`, treat the
-  // return like a fresh open: new `today`, filter back to All. A quick glance
-  // at another app keeps the filter. These listeners only exist while home is
-  // mounted, so a round or test in progress is never interrupted.
-  let hiddenAt = null;
+  // the date changed or the user was away for `RESUME_RESET_MS` (js/resume.js,
+  // which records background time on every screen), treat the return like a
+  // fresh open: new `today`, filter back to All. A quick glance at another
+  // app keeps the filter. A stale resume during a round or test is applied
+  // here, when home is next shown, so the round is never interrupted.
+  if (takeStaleResume(today)) {
+    selectedRegion = null;
+  }
+  // While home is showing, re-render at once. js/resume.js's listeners were
+  // added at app start, so they have already run when these do.
   const reopenIfStale = () => {
-    const isStale = localToday() !== today ||
-      (hiddenAt !== null && Date.now() - hiddenAt >= RESUME_RESET_MS);
-    hiddenAt = null;
-    if (!isStale) {
+    if (!takeStaleResume(today)) {
       return;
     }
     const focusSelector = describeFocus(container);
@@ -89,9 +89,7 @@ export function mount(container, context) {
     }
   };
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      hiddenAt = Date.now();
-    } else {
+    if (document.visibilityState === 'visible') {
       reopenIfStale();
     }
   }, { signal });
@@ -141,7 +139,11 @@ export function mount(container, context) {
   testButton.addEventListener('click', () => navigate('test', { region: selectedRegion, mode: selectedMode }), { signal });
 
   // A restore re-renders home, so the count reflects the imported progress.
-  const backupSheet = createBackupSheet({ onRestored: () => navigate('home'), signal });
+  const backupSheet = createBackupSheet({
+    knownCodes: countries.map((country) => country.code),
+    onRestored: () => navigate('home'),
+    signal
+  });
   const backupButton = el('button', {
     type: 'button',
     class: 'button-quiet home-backup',

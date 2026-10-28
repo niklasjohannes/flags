@@ -6,6 +6,12 @@
  * correct answer, a miss is black text with a cross. No red/green.
  */
 
+/* What sits above the question's flag: the bar and the verdict line
+   (css/question.css sizes a typing flag from it). */
+.view-practice {
+  --question-chrome-top: 4.875rem;
+}
+
 /* ---- Feedback (the verdict line, above the question) ---- */
 
 .view-practice .practice-feedback {

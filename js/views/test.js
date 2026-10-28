@@ -13,7 +13,7 @@
 // was told to block further dialogs answers `false` forever, and the native
 // dialog is titled with the page's origin.
 
-import { renderQuestion } from '../question.js';
+import { guardQuestionArea, renderQuestion } from '../question.js';
 import { REGIONS } from '../srs.js';
 import { createTestPass, getScopeCodes, isPassComplete, recordAnswer } from '../test-pass.js';
 import { ALL_REGIONS_LABEL, MODE_LABELS, REGION_LABELS, createChoiceGroup, el } from '../ui.js';
@@ -24,13 +24,9 @@ const ALL_VALUE = 'all';
 const EXIT_TITLE = 'Leave this test?';
 const EXIT_MESSAGE = 'Your answers so far will not be kept.';
 
-/**
- * Time (ms) after a question appears during which clicks on it are ignored.
- * The next question's options land where the last tap was, so without it a
- * double tap would answer a flag the user never saw. The window is the same
- * whatever the previous answer was, so it gives nothing away.
- */
-export const ANSWER_GUARD_MS = 300;
+// Time (ms) after a question appears during which clicks on it are ignored;
+// see `guardQuestionArea` in js/question.js.
+export { ANSWER_GUARD_MS } from '../question.js';
 
 let controller = null;
 
@@ -181,22 +177,8 @@ function startPass(container, { countries, navigate, region, mode, signal }) {
   exitButton.addEventListener('click', exitSheet.open, { signal });
   const stage = el('div', { class: 'test-question' });
 
-  // Both in the capture phase, so they run before the options' own listeners.
-  let shownAt = -Infinity;
-  stage.addEventListener('click', (event) => {
-    if (performance.now() - shownAt < ANSWER_GUARD_MS) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }, { capture: true, signal });
-  // A held Enter repeats on the newly focused option; only the first press
-  // may answer. Typing into the input may still repeat.
-  stage.addEventListener('keydown', (event) => {
-    if (event.repeat && event.target instanceof HTMLButtonElement) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  }, { capture: true, signal });
+  // A double tap, or a held Enter, must not answer the next flag unseen.
+  const guard = guardQuestionArea(stage, { signal });
 
   container.replaceChildren(
     el('div', { class: 'view-bar test-bar' }, [exitButton, counter]),
@@ -224,7 +206,7 @@ function startPass(container, { countries, navigate, region, mode, signal }) {
         }
       }
     });
-    shownAt = performance.now();
+    guard.arm();
     // Keeps focus (and the iOS keyboard, in typing mode) in the question.
     question.focus();
   };
