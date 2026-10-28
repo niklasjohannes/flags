@@ -13,8 +13,8 @@
  *
  * The check and cross are pixel drawings (img/mark-*.svg) used as a mask
  * over the text colour, matching the pixel accents (the UI face, Courier
- * Prime, has no cross glyph either). They are
- * decoration: `reveal()`'s hidden text is what screen readers get.
+ * Prime, has no check or cross glyph). They are decoration: `reveal()`'s
+ * hidden text is what screen readers get.
  */
 
 .question {
