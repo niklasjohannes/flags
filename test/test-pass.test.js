@@ -100,16 +100,27 @@ describe('createTestPass', () => {
     assert.notDeepEqual(a.codes, getScopeCodes({ countries, region: null }));
   });
 
-  it('puts every flag first about equally often', () => {
-    const rng = createRng(42);
-    const firsts = new Map(SMALL.map((country) => [country.code, 0]));
-    const runs = 4_000;
-    for (let i = 0; i < runs; i += 1) {
-      const pass = createTestPass({ countries: SMALL, region: null, rng });
-      firsts.set(pass.codes[0], firsts.get(pass.codes[0]) + 1);
+  it('puts every flag at every position about equally often', () => {
+    const runs = 8_000;
+    const size = SMALL.length;
+    // counts[position][code], and how often each full order came up.
+    const counts = Array.from({ length: size }, () => new Map(SMALL.map((country) => [country.code, 0])));
+    const orders = new Map();
+    for (let seed = 1; seed <= runs; seed += 1) {
+      const { codes } = createTestPass({ countries: SMALL, region: null, rng: createRng(seed) });
+      codes.forEach((code, position) => counts[position].set(code, counts[position].get(code) + 1));
+      orders.set(codes.join(','), (orders.get(codes.join(',')) ?? 0) + 1);
     }
-    for (const [code, count] of firsts) {
-      assert.ok(Math.abs(count / runs - 0.25) < 0.03, `${code}: ${count}`);
+    // Expected share 1/4 per cell, sd ~0.005 over 8,000 runs.
+    counts.forEach((byCode, position) => {
+      for (const [code, count] of byCode) {
+        assert.ok(Math.abs(count / runs - 1 / size) < 0.02, `${code} at ${position}: ${count}`);
+      }
+    });
+    // All 4! = 24 orders, each about 1/24 of the runs (sd ~18).
+    assert.equal(orders.size, 24);
+    for (const [order, count] of orders) {
+      assert.ok(Math.abs(count - runs / 24) < 100, `${order}: ${count}`);
     }
   });
 
@@ -210,9 +221,10 @@ describe('scorePass', () => {
   it('rounds the percentage down, so only a perfect pass shows 100%', () => {
     const pass = createTestPass({ countries, region: null, rng: createRng(2) });
     const almost = scorePass(answerAll(pass, { [pass.codes[0]]: pass.codes[1] }), countries);
-    assert.equal(almost.total, 231);
-    assert.equal(almost.correct, 230);
-    assert.equal(almost.percent, 99);
+    assert.equal(almost.total, countries.length);
+    assert.equal(almost.correct, countries.length - 1);
+    assert.equal(almost.percent, Math.floor(((countries.length - 1) * 100) / countries.length));
+    assert.ok(almost.percent < 100);
   });
 
   it('rejects incomplete passes and unknown codes', () => {

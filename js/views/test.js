@@ -18,6 +18,14 @@ const ALL_VALUE = 'all';
 
 const EXIT_MESSAGE = 'Leave this test? Your answers so far will not be kept.';
 
+/**
+ * Time (ms) after a question appears during which clicks on it are ignored.
+ * The next question's options land where the last tap was, so without it a
+ * double tap would answer a flag the user never saw. The window is the same
+ * whatever the previous answer was, so it gives nothing away.
+ */
+export const ANSWER_GUARD_MS = 300;
+
 let controller = null;
 
 /**
@@ -99,6 +107,23 @@ function startPass(container, { countries, navigate, region, mode, signal }) {
   }, { signal });
   const stage = el('div', { class: 'test-question' });
 
+  // Both in the capture phase, so they run before the options' own listeners.
+  let shownAt = -Infinity;
+  stage.addEventListener('click', (event) => {
+    if (performance.now() - shownAt < ANSWER_GUARD_MS) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, { capture: true, signal });
+  // A held Enter repeats on the newly focused option; only the first press
+  // may answer. Typing into the input may still repeat.
+  stage.addEventListener('keydown', (event) => {
+    if (event.repeat && event.target instanceof HTMLButtonElement) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, { capture: true, signal });
+
   container.replaceChildren(
     el('div', { class: 'test-bar' }, [counter, exitButton]),
     stage
@@ -124,6 +149,7 @@ function startPass(container, { countries, navigate, region, mode, signal }) {
         }
       }
     });
+    shownAt = performance.now();
     // Keeps focus (and the iOS keyboard, in typing mode) in the question.
     question.focus();
   };
