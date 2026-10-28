@@ -133,14 +133,16 @@
   border-color: var(--color-text);
 }
 
-/* Icons are decoration; the hidden text from `reveal()` is what is read. */
+/* Icons are decoration; the hidden text from `reveal()` is what is read.
+   14px is 2 CSS pixels per cell of the 7 x 7 grid, so `crispEdges`
+   draws every cell the same size (an em-based size gives a mix). */
 .is-correct::after,
 .is-wrong::after,
 .question-answer:not(:empty)::before {
   content: "";
   flex: none;
-  width: 0.875em;
-  height: 0.875em;
+  width: 14px;
+  height: 14px;
   background: currentColor;
   -webkit-mask: url("../img/mark-check.svg") center / contain no-repeat;
   mask: url("../img/mark-check.svg") center / contain no-repeat;
@@ -149,6 +151,17 @@
 .is-wrong::after {
   -webkit-mask-image: url("../img/mark-cross.svg");
   mask-image: url("../img/mark-cross.svg");
+}
+
+/* Forced colours (Windows High Contrast) replace the background with the
+   page's, which would erase the masked marks: paint them as text. */
+@media (forced-colors: active) {
+  .is-correct::after,
+  .is-wrong::after,
+  .question-answer:not(:empty)::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
 }
 
 .is-correct {
