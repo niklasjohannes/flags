@@ -59,6 +59,8 @@ class NoStoreHandler(SimpleHTTPRequestHandler):
         '.js': 'text/javascript',
         '.json': 'application/json',
         '.svg': 'image/svg+xml',
+        '.ttf': 'font/ttf',
+        '.txt': 'text/plain',
         '.webmanifest': 'application/manifest+json',
     }
 

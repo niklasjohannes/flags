@@ -12,7 +12,62 @@
  * "you got it right" and focus rings. A miss is black/grey with an icon and
  * an outline. No red/green anywhere. Contrast against white: text 18.9:1,
  * muted text 5.7:1, accent 5.2:1.
+ *
+ * Pixel look (GitHub #24): all UI text is set in Courier Prime, a sturdier
+ * Courier, corners are square, buttons cast a hard offset shadow, and the
+ * right/wrong marks are pixel drawings (img/mark-*.svg). Flags keep their
+ * own look: no rule here touches the flag images.
  */
+
+/* ---- Fonts ---- */
+
+/*
+ * Courier Prime 3.018 (fonts/, SIL OFL 1.1, see THIRD_PARTY_NOTICES.md),
+ * Regular and Bold; 600 resolves to Bold. `swap` shows the fallback until
+ * it arrives, which only happens on a first visit: index.html preloads both
+ * files and sw.js precaches them.
+ *
+ * The fallback face is a local Courier New (or Courier) matched to Courier
+ * Prime's metrics, so the swap barely rewraps or moves the text. Both are
+ * monospaced at 0.6 em (measured: within 0.1%), so `size-adjust` is 100%
+ * and the overrides are simply Courier Prime's ascent (0.781 em) and
+ * descent (0.342 em).
+ */
+@font-face {
+  font-family: "Courier Prime";
+  src: url("../fonts/CourierPrime-Regular.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Courier Prime";
+  src: url("../fonts/CourierPrime-Bold.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Courier Prime Fallback";
+  src: local("Courier New"), local("CourierNewPSMT"), local("Courier");
+  font-weight: 400 500;
+  size-adjust: 100%;
+  ascent-override: 78.1%;
+  descent-override: 34.2%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Courier Prime Fallback";
+  src: local("Courier New Bold"), local("CourierNewPS-BoldMT"), local("Courier Bold"), local("Courier-Bold");
+  font-weight: 600 700;
+  size-adjust: 100%;
+  ascent-override: 78.1%;
+  descent-override: 34.2%;
+  line-gap-override: 0%;
+}
 
 /* ---- Tokens ---- */
 
@@ -31,9 +86,12 @@
   --color-accent-soft: rgb(79 114 130 / 0.35);
   --color-backdrop: rgb(17 17 17 / 0.4);
 
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "Courier Prime", "Courier Prime Fallback", "Courier New", Courier, ui-monospace, monospace;
   --font-size-base: 1.0625rem;
   --font-size-small: 0.875rem;
+  /* Muted (grey) secondary text is set bold: Courier Prime's regular
+     strokes are thin, and thin grey reads weak. */
+  --font-weight-muted: 700;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -43,8 +101,13 @@
   --space-8: 2rem;
   --space-12: 3rem;
 
-  --radius: 0.75rem;
+  /* Square corners for the pixel look. `--radius-small` frames the flags,
+     which keep their usual look. */
+  --radius: 0;
   --radius-small: 0.375rem;
+  /* Hard, unblurred offset shadow under buttons and sheets. */
+  --pixel-offset: 0.25rem;
+  --pixel-shadow: var(--pixel-offset) var(--pixel-offset) 0 var(--color-text);
   /* 48 px, above the 44 px minimum tap target. */
   --tap-min: 3rem;
   --content-max: 32rem;
@@ -52,6 +115,8 @@
 
   --focus-ring: 3px solid var(--color-accent);
   --pulse-duration: 700ms;
+  /* Animations move in a few hard steps, like a sprite. */
+  --pixel-steps: steps(4, end);
 }
 
 /* ---- Reset ---- */
@@ -163,6 +228,7 @@ input {
 
 .status {
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 /* Read by screen readers, not shown. */
@@ -187,14 +253,22 @@ input {
   padding: var(--space-3) var(--space-4);
   border: 2px solid var(--color-text);
   border-radius: var(--radius);
+  box-shadow: var(--pixel-shadow);
   font-weight: 600;
   cursor: pointer;
   touch-action: manipulation;
-  transition: transform 80ms ease-out;
+  transition: transform 80ms steps(1, end), box-shadow 80ms steps(1, end);
 }
 
+/* Pressed: the button drops into its shadow, like a pixel-art key. */
 .button:active {
-  transform: scale(0.98);
+  transform: translate(var(--pixel-offset), var(--pixel-offset));
+  box-shadow: 0 0 0 var(--color-text);
+}
+
+/* The focus ring clears the shadow instead of cutting through it. */
+.button:focus-visible {
+  outline-offset: calc(var(--pixel-offset) + 2px);
 }
 
 .button-primary {
@@ -251,6 +325,7 @@ input {
 .score-caption {
   margin: 0 0 var(--space-1);
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 /* ---- Choice group (radio chips, js/ui.js `createChoiceGroup`) ---- */
@@ -300,7 +375,7 @@ input {
   min-height: var(--tap-min);
   padding: 0 var(--space-4);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--color-bg);
   white-space: nowrap;
   cursor: pointer;
@@ -325,7 +400,7 @@ input {
   gap: 0;
   padding: 3px;
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: var(--color-surface);
 }
 
@@ -343,10 +418,10 @@ input {
   margin: auto auto 0;
   padding: 0;
   border: 0;
+  border-top: 2px solid var(--color-text);
   border-radius: var(--radius) var(--radius) 0 0;
   background: var(--color-bg);
   color: var(--color-text);
-  box-shadow: 0 -0.25rem 1.5rem rgb(17 17 17 / 0.12);
 }
 
 .sheet::backdrop {
@@ -354,7 +429,7 @@ input {
 }
 
 .sheet[open] {
-  animation: sheet-in 180ms ease-out;
+  animation: sheet-in 180ms steps(3, end);
 }
 
 .sheet-body {
@@ -373,6 +448,7 @@ input {
 .sheet-text {
   margin-bottom: var(--space-6);
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 .sheet-actions {
@@ -390,7 +466,9 @@ input {
   .sheet {
     max-width: 26rem;
     margin: auto;
+    border: 2px solid var(--color-text);
     border-radius: var(--radius);
+    box-shadow: calc(2 * var(--pixel-offset)) calc(2 * var(--pixel-offset)) 0 var(--color-text);
   }
 }
 
@@ -426,6 +504,7 @@ input {
 
 .view-home .due-label {
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 /* Quiet "Backup" link under the actions; opens the backup sheet. */

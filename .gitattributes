@@ -7,3 +7,7 @@
 *.js text eol=lf
 *.md text eol=lf
 *.png binary
+# Vendored fonts and their license stay byte-identical to upstream, with no
+# line-ending normalisation: THIRD_PARTY_NOTICES.md and sw.js record their
+# SHA-256s.
+fonts/* -text

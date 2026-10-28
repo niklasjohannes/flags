@@ -17,6 +17,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Flags">
+  <!-- The UI font (css/style.css), fetched in parallel with the CSS
+       instead of after it, so the fallback rarely shows. -->
+  <link rel="preload" href="./fonts/CourierPrime-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="preload" href="./fonts/CourierPrime-Bold.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="./css/style.css">
   <link rel="stylesheet" href="./css/question.css">
   <link rel="stylesheet" href="./css/practice.css">

@@ -17,6 +17,7 @@
 .view-test .test-intro {
   margin: 0 0 var(--space-6);
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 .view-test .test-mode {
@@ -37,6 +38,7 @@
 .view-results .results-scope {
   margin: calc(-1 * var(--space-4)) 0 var(--space-8);
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 .view-results .results-list {
@@ -72,11 +74,13 @@
 .view-results .results-miss-answer {
   color: var(--color-text-muted);
   font-size: 0.9375rem;
+  font-weight: var(--font-weight-muted);
 }
 
 .view-results .results-none {
   margin: 0;
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
 }
 
 /* A long miss list scrolls under the actions, which stay in thumb reach. */

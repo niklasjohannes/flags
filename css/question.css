@@ -10,6 +10,11 @@
  *   - answered wrong (`.is-answered-wrong`): the pick gets a grey dashed
  *     outline and a cross; the right answer a black outline and a check.
  * No red/green, and the accent never marks a miss.
+ *
+ * The check and cross are pixel drawings (img/mark-*.svg) used as a mask
+ * over the text colour, matching the pixel accents (the UI face, Courier
+ * Prime, has no check or cross glyph). They are decoration: `reveal()`'s
+ * hidden text is what screen readers get.
  */
 
 .question {
@@ -42,7 +47,7 @@
 
 .is-answered-correct .question-flag {
   border-color: var(--color-accent);
-  animation: question-pulse var(--pulse-duration) ease-out;
+  animation: question-pulse var(--pulse-duration) var(--pixel-steps);
 }
 
 /*
@@ -129,11 +134,35 @@
   border-color: var(--color-text);
 }
 
-/* Icons are decoration; the hidden text from `reveal()` is what is read. */
+/* Icons are decoration; the hidden text from `reveal()` is what is read.
+   14px is 2 CSS pixels per cell of the 7 x 7 grid, so `crispEdges`
+   draws every cell the same size (an em-based size gives a mix). */
 .is-correct::after,
-.is-wrong::after {
+.is-wrong::after,
+.question-answer:not(:empty)::before {
+  content: "";
   flex: none;
-  font-weight: 700;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: url("../img/mark-check.svg") center / contain no-repeat;
+  mask: url("../img/mark-check.svg") center / contain no-repeat;
+}
+
+.is-wrong::after {
+  -webkit-mask-image: url("../img/mark-cross.svg");
+  mask-image: url("../img/mark-cross.svg");
+}
+
+/* Forced colours (Windows High Contrast) replace the background with the
+   page's, which would erase the masked marks: paint them as text. */
+@media (forced-colors: active) {
+  .is-correct::after,
+  .is-wrong::after,
+  .question-answer:not(:empty)::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
 }
 
 .is-correct {
@@ -142,25 +171,15 @@
   font-weight: 600;
 }
 
-.is-correct::after {
-  content: "\2713";
-  content: "\2713" / "";
-}
-
 .question .is-wrong {
   border: 2px dashed var(--color-border-strong);
   color: var(--color-text-muted);
 }
 
-.is-wrong::after {
-  content: "\2715";
-  content: "\2715" / "";
-}
-
 .is-answered-correct .is-correct {
   border-color: var(--color-accent);
   outline-color: var(--color-accent);
-  animation: question-pulse var(--pulse-duration) ease-out;
+  animation: question-pulse var(--pulse-duration) var(--pixel-steps);
 }
 
 .is-answered-correct .is-correct::after {
@@ -188,6 +207,7 @@
 
 .question-input::placeholder {
   color: var(--color-text-muted);
+  font-weight: var(--font-weight-muted);
   opacity: 1;
 }
 
@@ -208,8 +228,8 @@
 }
 
 .question-answer:not(:empty)::before {
-  content: "\2713\00a0";
-  content: "\2713\00a0" / "";
+  display: inline-block;
+  margin-right: 0.375em;
 }
 
 .is-answered-correct .question-answer::before {
@@ -218,6 +238,8 @@
 
 /* ---- Motion ---- */
 
+/* A ring that grows outwards in a few hard steps (`--pixel-steps`) and
+   fades; off under reduced motion (css/style.css). */
 @keyframes question-pulse {
   0% {
     box-shadow: 0 0 0 0 var(--color-accent-soft);

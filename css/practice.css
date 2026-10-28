@@ -25,14 +25,32 @@
   color: var(--color-accent);
 }
 
-.view-practice .is-correct-feedback::before {
-  content: "\2713\00a0";
-  content: "\2713\00a0" / "";
+/* Pixel check / cross before the verdict (see css/question.css, also for
+   the 14px size). */
+.view-practice .is-correct-feedback::before,
+.view-practice .is-wrong-feedback::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 0.375em;
+  background: currentColor;
+  -webkit-mask: url("../img/mark-check.svg") center / contain no-repeat;
+  mask: url("../img/mark-check.svg") center / contain no-repeat;
 }
 
 .view-practice .is-wrong-feedback::before {
-  content: "\2715\00a0";
-  content: "\2715\00a0" / "";
+  -webkit-mask-image: url("../img/mark-cross.svg");
+  mask-image: url("../img/mark-cross.svg");
+}
+
+/* Forced colours: see css/question.css. */
+@media (forced-colors: active) {
+  .view-practice .is-correct-feedback::before,
+  .view-practice .is-wrong-feedback::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
 }
 
 /* Next sits at the bottom, in thumb reach; the area keeps its place. */

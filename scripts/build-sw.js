@@ -27,7 +27,7 @@ const SW_PATH = join(REPO_ROOT, 'sw.js');
 export const APP_FILES = Object.freeze(['index.html', 'manifest.webmanifest']);
 
 /** Directories whose every (non-dot) file the app serves. */
-export const APP_DIRS = Object.freeze(['css', 'data', 'flags', 'icons', 'js']);
+export const APP_DIRS = Object.freeze(['css', 'data', 'flags', 'fonts', 'icons', 'img', 'js']);
 
 /** Hex digits of the content hash kept as `CACHE_VERSION`. */
 export const VERSION_LENGTH = 16;
