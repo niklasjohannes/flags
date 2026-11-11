@@ -22,6 +22,7 @@ import {
   answerCurrent,
   createRound,
   getCurrentCode,
+  isReask,
   isRoundComplete,
   recordAnswer
 } from '../practice-round.js';
@@ -79,10 +80,14 @@ export function mount(container, context) {
   // batch drawn in this visit. Reset only when a new visit mounts.
   let sessionCorrect = 0;
   let sessionAnswered = 0;
+  // Whether the question currently on screen is a re-ask; set in
+  // `showQuestion`, so it stays put through the feedback shown for it.
+  let currentIsReask = false;
 
   function updateCounter() {
     const percent = sessionAnswered === 0 ? 0 : Math.floor((sessionCorrect * 100) / sessionAnswered);
-    progress.textContent = `${sessionCorrect}/${sessionAnswered} (${percent}%)`;
+    const suffix = currentIsReask ? ' · again' : '';
+    progress.textContent = `${sessionCorrect}/${sessionAnswered} (${percent}%)${suffix}`;
   }
 
   function drawBatch() {
@@ -108,6 +113,8 @@ export function mount(container, context) {
       // batch is never empty: draw the next one and continue silently.
       round = drawBatch();
     }
+    currentIsReask = isReask(round);
+    updateCounter();
     const code = getCurrentCode(round);
     feedback.textContent = '';
     feedback.classList.remove('is-correct-feedback', 'is-wrong-feedback');
@@ -185,7 +192,6 @@ export function mount(container, context) {
       );
       return;
     }
-    updateCounter();
     // The verdict sits above the question, so a miss reads "✕ Not quite",
     // then the marked answers (and the name, in typing mode) below it.
     container.replaceChildren(header, feedback, questionArea, actions);

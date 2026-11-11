@@ -451,8 +451,8 @@ function classifyScope(states, countries, today, region) {
  *      randomly chosen never-seen flags at `NEW_FLAG_WEIGHT`;
  *   2. if tier 1 cannot fill the round, further never-seen flags at random
  *      (owner decision on GitHub #32: new flags before re-using flags that
- *      are not due yet, so Keep going on day 1 shows new flags instead of
- *      the ones just answered);
+ *      are not due yet, so continued practice on day 1 shows new flags
+ *      instead of the ones just answered);
  *   3. only once the scope has no never-seen flags left, seen flags that are
  *      not yet due, with a small non-zero weight favouring harder and
  *      closer-to-due flags.
