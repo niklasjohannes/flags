@@ -1,6 +1,6 @@
 /*
- * Practice view (spec #5), including the round-end summary. Scope every rule
- * under `.view-practice`. Tokens and shared pieces (`.button`, `.view-bar`,
+ * Practice view (spec #5; endless mode: GitHub #40). Scope every rule under
+ * `.view-practice`. Tokens and shared pieces (`.button`, `.view-bar`,
  * `.view-actions`, `.score`) are in css/style.css; the question in
  * css/question.css. Monochrome first (PLAN decision 8): the accent marks a
  * correct answer, a miss is black text with a cross. No red/green.
@@ -56,12 +56,6 @@
 /* Next sits at the bottom, in thumb reach; the area keeps its place. */
 .view-practice .practice-next-area {
   min-height: calc(3.25rem + var(--space-6));
-}
-
-/* ---- Round-end summary ---- */
-
-.view-practice .practice-summary-title {
-  margin-bottom: var(--space-8);
 }
 
 /* The verdict line below spaces the bar from the flag. */

@@ -124,9 +124,9 @@ Build `index.html` + base `css/style.css` + `js/app.js` view-routing skeleton. H
 
 Depends on: #4.
 
-Fixed 10-question rounds drawn from `srs.js`'s scheduler (scoped to the active continent filter). Hybrid feedback: correct auto-advances almost immediately, incorrect pauses showing the right name until a manual "Next" tap. Round-end summary with "Keep going" / "Done". New (never-seen) flags appear blind, same as any question — a miss is just a normal lapse.
+Endless practice (scoped to the active continent filter), drawn in batches behind the scenes from `srs.js`'s scheduler, with no round boundary shown (owner decision on GitHub #40, superseding the original fixed 10-question rounds with a "Keep going" / "Done" prompt). Hybrid feedback: correct auto-advances almost immediately, incorrect pauses showing the right name until a manual "Next" tap. A live header counter (session-wide correct/answered/percent) replaces the round-end summary; Exit is the only way to leave. New (never-seen) flags appear blind, same as any question — a miss is just a normal lapse.
 
-**Acceptance criteria**: a full round can be played start-to-finish in both quiz modes; `localStorage` SRS state updates correctly afterward (checked before/after); incorrect answers visibly wait for manual advance, correct ones don't.
+**Acceptance criteria**: practice can be played through several batches without interruption in both quiz modes; `localStorage` SRS state updates correctly afterward (checked before/after); incorrect answers visibly wait for manual advance, correct ones don't; the header counter tracks the session accurately.
 
 ---
 

@@ -12,7 +12,7 @@ import {
   MIN_EASE_FACTOR,
   NEW_FLAG_LIMIT,
   REQUEUE_GAP,
-  ROUND_SIZE,
+  BATCH_SIZE,
   countDue,
   countFlags,
   createCardState,
@@ -272,13 +272,13 @@ describe('requeueLapse', () => {
 // ---- Scheduling ----
 
 describe('pickRound', () => {
-  it(`returns ${ROUND_SIZE} distinct codes by default`, () => {
+  it(`returns ${BATCH_SIZE} distinct codes by default`, () => {
     const countries = makeCountries('c', 50);
     const states = toStates(countries.slice(0, 30).map((c) => makeState(c.code)));
     for (let seed = 1; seed <= 200; seed += 1) {
       const round = pickRound({ states, countries, today: TODAY, rng: createRng(seed) });
-      assert.equal(round.length, ROUND_SIZE);
-      assert.equal(new Set(round).size, ROUND_SIZE);
+      assert.equal(round.length, BATCH_SIZE);
+      assert.equal(new Set(round).size, BATCH_SIZE);
     }
   });
 
@@ -302,8 +302,8 @@ describe('pickRound', () => {
   it('fills a brand-new user\'s round entirely from never-seen flags', () => {
     const countries = makeCountries('c', 200);
     const round = pickRound({ states: {}, countries, today: TODAY, rng: createRng(3) });
-    assert.equal(round.length, ROUND_SIZE);
-    assert.equal(new Set(round).size, ROUND_SIZE);
+    assert.equal(round.length, BATCH_SIZE);
+    assert.equal(new Set(round).size, BATCH_SIZE);
   });
 
   it('counts duplicate countries once and ignores states outside the data', () => {
@@ -345,7 +345,7 @@ describe('pickRound', () => {
     const states = toStates(countries.map((c) => makeState(c.code)));
     for (let seed = 1; seed <= 100; seed += 1) {
       const round = pickRound({ states, countries, today: TODAY, region: 'africa', rng: createRng(seed) });
-      assert.equal(round.length, ROUND_SIZE);
+      assert.equal(round.length, BATCH_SIZE);
       assert.ok(round.every((code) => code.startsWith('af')));
     }
     const oceania = pickRound({ states, countries, today: TODAY, region: 'oceania', rng: createRng(1) });
@@ -367,7 +367,7 @@ describe('pickRound', () => {
       // picked and the rest comes from further never-seen flags, not from the
       // not-yet-due seen ones.
       assert.equal(round.filter((code) => code.startsWith('due')).length, 5);
-      assert.equal(round.filter((code) => code.startsWith('new')).length, ROUND_SIZE - 5);
+      assert.equal(round.filter((code) => code.startsWith('new')).length, BATCH_SIZE - 5);
       assert.equal(round.filter((code) => code.startsWith('later')).length, 0);
     }
   });
@@ -385,7 +385,7 @@ describe('pickRound', () => {
       const round = pickRound({ states, countries, today: TODAY, rng: createRng(seed) });
       assert.equal(round.filter((code) => code.startsWith('due')).length, 2);
       assert.equal(round.filter((code) => code.startsWith('new')).length, 4);
-      assert.equal(round.filter((code) => code.startsWith('later')).length, ROUND_SIZE - 6);
+      assert.equal(round.filter((code) => code.startsWith('later')).length, BATCH_SIZE - 6);
     }
   });
 

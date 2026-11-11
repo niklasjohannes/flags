@@ -30,15 +30,16 @@
 //
 // Persistence rules (`recordAnswer`). Once due flags run out, `pickRound`
 // fills rounds with flags that are not due yet, which are often the ones
-// answered minutes ago. Without these rules each Keep going (or Done, then
-// Start) would grow their intervals again, e.g. 1 -> 6 -> 16 days in one
-// sitting.
+// answered minutes ago. Without these rules each new batch (or exiting and
+// starting again) would grow their intervals again, e.g. 1 -> 6 -> 16 days
+// in one sitting.
 //   - Early review: a seen flag that is not due yet (`dueDate > today`)
 //     answered correctly keeps its persisted state (reinforcement only). A
 //     miss is still a real lapse. Due and never-seen flags always update.
 //   - Once per practice visit: a code whose state was changed since the
-//     practice view mounted is never changed again during that visit (Keep
-//     going keeps the visit). Its answers are still scored in each round.
+//     practice view mounted is never changed again during that visit (a
+//     visit spans every batch, however many are drawn). Its answers are
+//     still scored in each round.
 
 import { createCardState, isNewCard, requeueLapse, updateCardState } from './srs.js';
 

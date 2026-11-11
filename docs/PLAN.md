@@ -21,7 +21,7 @@ A UX design review (via `/grill-me`) resolved the following, which this plan inc
 
 1. **Home screen first** (not a cold-open quiz) — shows a continent filter, mode toggle, a "due" count scoped to that filter, a Start button, and a separate Test entry point. No other stats (no streak, no accuracy block) — kept deliberately minimal.
 2. **Continent filter always resets to "All"** on open; it is never remembered between sessions, so staleness in neglected regions can't hide indefinitely.
-3. **Practice sessions are fixed 10-question rounds**, with "Keep going" / "Done" offered at the end of each round rather than a hard stop or infinite stream.
+3. **Practice sessions are endless** (owner decision on GitHub #40, superseding the original fixed 10-question rounds with a "Keep going" / "Done" prompt): flags are drawn in batches behind the scenes, with no round boundary shown, and a live running counter replaces the end-of-round summary. Exit is the only way to leave.
 4. **Test mode is a separate, SRS-untouched feature**: pick "All" or a continent, answer blind (no feedback per question), untimed, and get a results screen at the end with score + the specific list of missed flags. It never writes to `srs.js` state.
 5. **Answer feedback is hybrid**: correct answers auto-advance almost immediately; incorrect answers pause and wait for a manual "Next" tap so the correct name actually registers.
 6. **New (never-seen) flags are thrown in blind**, not pre-taught — including in typing mode, where a first miss is just a normal lapse (not a dedicated teaching step).
@@ -83,7 +83,7 @@ This logic lives in pure, dependency-free functions so it's easy to reason about
 ### Screens & flows
 
 - **Home screen**: continent filter (defaults to "All" every time the app is opened — never remembered), a mode toggle (multiple choice / typing), a total flag count scoped to the current filter selection (independent of SRS state, so it never drops to zero from practising — owner decision on GitHub #39), a **Start** button (practice), and a separate **Test** button. No other stats shown (no streak, no accuracy) — kept to a single glance.
-- **Practice session**: fixed rounds of 10 questions, drawn via the SRS scheduler above (scoped to the chosen continent filter). At the end of a round, show a short summary (e.g. "9/10 correct") with "Keep going" (starts another round) or "Done" (back to home).
+- **Practice session**: endless, scoped to the chosen continent filter (owner decision on GitHub #40). Flags are drawn from the SRS scheduler above in batches, with no visible boundary between them; the header shows a live running counter (e.g. "10/12 (83%)") instead of a round-end summary. Exit is the only way back to home.
 - **Test mode**: user picks "All" or a continent, then answers every flag in that scope once, blind (no per-question right/wrong feedback, no indication of progress beyond a simple counter like "42/195"), untimed. At the end, show a results screen: score (e.g. "182/195, 93%") and the specific list of missed flags. Entirely separate from SRS state — purely a self-assessment snapshot.
 - **New (never-seen) flags**: appear like any other question, in whichever mode is active — no dedicated "teaching" step. A miss on a brand-new flag is just a normal SRS lapse, which naturally brings it back around soon.
 
@@ -107,7 +107,7 @@ This logic lives in pure, dependency-free functions so it's easy to reason about
 
 - Serve the site locally (e.g. `python -m http.server`) and open it in the browser preview tool.
 - Emulate a mobile viewport (375×812) to check layout, tap targets, and flag sizing.
-- Walk the full flow: home screen (continent filter resets to "All" on reload) → Start → a 10-question practice round → round summary → "Keep going"/"Done".
+- Walk the full flow: home screen (continent filter resets to "All" on reload) → Start → endless practice, answering several questions while the live counter updates → Exit back to home.
 - Exercise both quiz modes end-to-end: confirm correct answers auto-advance, incorrect answers pause for a manual "Next" and show the right name; confirm `localStorage` SRS state updates sensibly (interval grows on success, resets on failure, struggling flags reappear sooner, scoped correctly by continent filter).
 - Confirm typing mode's autosuggest list is typo/fuzzy-tolerant, matches aliases, and answering is selection-only (no raw-text submit).
 - Confirm MC distractors never pair a territory with its own parent/sibling.

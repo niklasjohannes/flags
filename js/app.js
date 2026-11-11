@@ -57,8 +57,8 @@
 // files:
 //
 //   js/views/home.js      css/style.css     spec #4 (home, base styles)
-//   js/views/practice.js  css/practice.css  spec #5 (practice rounds, incl.
-//                                           the round-end summary)
+//   js/views/practice.js  css/practice.css  spec #5 (endless practice,
+//                                           GitHub #40)
 //   js/views/test.js      css/test.css      spec #6 (test pass)
 //   js/views/results.js   css/test.css      spec #6 (test results screen)
 //
