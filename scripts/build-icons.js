@@ -1,6 +1,6 @@
-// Builds the app icons in `icons/` from one geometry: a white waving flag on
-// a pole, on the app's accent colour. Generic on purpose: a plain cloth, no
-// real country's flag. Zero dependencies: shapes are rasterised here with
+// Builds the app icons in `icons/` from one geometry: a black waving flag on
+// a pole, on a white tile. Generic on purpose: a plain cloth, no real
+// country's flag. Zero dependencies: shapes are rasterised here with
 // supersampled coverage and encoded as PNG with `node:zlib`; the SVG favicon
 // is drawn from the same functions.
 //
@@ -27,9 +27,10 @@ import { deflateSync } from 'node:zlib';
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ICONS_DIR = join(REPO_ROOT, 'icons');
 
-/** Accent colour (`--color-accent` in css/style.css). */
-export const ACCENT_RGB = Object.freeze([0x4f, 0x72, 0x82]);
-const MARK_RGB = Object.freeze([0xff, 0xff, 0xff]);
+/** Tile colour: white. */
+export const ACCENT_RGB = Object.freeze([0xff, 0xff, 0xff]);
+/** Mark colour (`--color-text` in css/style.css). */
+const MARK_RGB = Object.freeze([0x11, 0x11, 0x11]);
 
 // Samples per pixel along each axis (SUPERSAMPLE² per pixel).
 const SUPERSAMPLE = 6;
