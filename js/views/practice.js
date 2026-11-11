@@ -1,35 +1,34 @@
-// Practice view (spec #5; PLAN decisions 3, 5, 6): rounds of `ROUND_SIZE`
-// flags from the SRS scheduler, scoped to the region picked on home, then a
-// round-end summary with Keep going / Done.
+// Practice view (spec #5; PLAN decisions 3, 5, 6; endless mode: GitHub #40):
+// an endless stream of flags from the SRS scheduler, scoped to the region
+// picked on home, drawn in `BATCH_SIZE` batches with no visible boundary
+// between them.
 //
 // Receives `params: { region, mode }` from home. See the view contract in
-// js/app.js. Round logic (what is asked next, which answer counts, the score)
-// is in js/practice-round.js; this file only renders it and persists answers.
+// js/app.js. Batch logic (what is asked next, which answer counts, the
+// batch's own score) is in js/practice-round.js; this file only renders it,
+// persists answers, and tracks the session-wide counter.
 //
 // Feedback is hybrid (PLAN decision 5): a correct answer is revealed and
 // auto-advances after `CORRECT_ADVANCE_MS`; a miss is revealed (showing the
 // correct name) and waits for a Next tap.
 //
-// The first answer to each flag is saved immediately, so leaving mid-round
+// The first answer to each flag is saved immediately, so leaving mid-session
 // keeps progress; that is also why Exit needs no confirmation. Re-asks of a
 // missed flag are never saved or scored. What gets saved follows the
 // early-review and once-per-visit rules in js/practice-round.js; a visit
-// lasts from mount to unmount, so it spans Keep going.
+// lasts from mount to unmount, so it spans every batch drawn in it.
 
 import {
   answerCurrent,
   createRound,
   getCurrentCode,
-  getProgress,
-  getScore,
   isReask,
   isRoundComplete,
   recordAnswer
 } from '../practice-round.js';
 import { guardQuestionArea, renderQuestion } from '../question.js';
-import { ROUND_SIZE, pickRound } from '../srs.js';
+import { BATCH_SIZE, pickRound } from '../srs.js';
 import { loadStates, localToday, saveStates } from '../storage.js';
-import { formatScore } from '../test-pass.js';
 import { el } from '../ui.js';
 
 /** Delay (ms) between revealing a correct answer and the next question. */
@@ -77,33 +76,46 @@ export function mount(container, context) {
   let question = null;
   let persistedCodes = new Set();
 
-  // Swallow clicks on the question just after it appears, and a held Enter
-  // on Next or Keep going repeating onto its first option.
-  const guard = guardQuestionArea(questionArea, { signal });
+  // Session-wide counter (GitHub #40): first answers only, across every
+  // batch drawn in this visit. Reset only when a new visit mounts.
+  let sessionCorrect = 0;
+  let sessionAnswered = 0;
+  // Whether the question currently on screen is a re-ask; set in
+  // `showQuestion`, so it stays put through the feedback shown for it.
+  let currentIsReask = false;
 
-  function showSummary() {
-    const score = getScore(round);
-    const keepGoingButton = el('button', { type: 'button', class: 'button button-primary', 'data-action': 'keep-going' }, ['Keep going']);
-    const doneButton = el('button', { type: 'button', class: 'button button-secondary', 'data-action': 'done' }, ['Done']);
-    keepGoingButton.addEventListener('click', startRound, { signal });
-    doneButton.addEventListener('click', () => navigate('home'), { signal });
-    container.replaceChildren(
-      el('h1', { class: 'practice-summary-title' }, ['Round complete']),
-      el('p', { class: 'score-caption' }, ['Correct']),
-      el('p', { class: 'score practice-score' }, [formatScore(score)]),
-      el('div', { class: 'view-actions practice-actions' }, [keepGoingButton, doneButton])
-    );
-    keepGoingButton.focus({ preventScroll: true });
+  function updateCounter() {
+    const percent = sessionAnswered === 0 ? 0 : Math.floor((sessionCorrect * 100) / sessionAnswered);
+    const suffix = currentIsReask ? ' · again' : '';
+    progress.textContent = `${sessionCorrect}/${sessionAnswered} (${percent}%)${suffix}`;
   }
+
+  function drawBatch() {
+    const today = localToday();
+    const codes = pickRound({
+      states: loadStates(today),
+      countries,
+      today,
+      region,
+      rng: Math.random,
+      n: BATCH_SIZE
+    });
+    return createRound(codes);
+  }
+
+  // Swallow clicks on the question just after it appears, and a held Enter
+  // on Next repeating onto its first option.
+  const guard = guardQuestionArea(questionArea, { signal });
 
   function showQuestion() {
     if (isRoundComplete(round)) {
-      showSummary();
-      return;
+      // The region has at least one flag (checked in startRound), so this
+      // batch is never empty: draw the next one and continue silently.
+      round = drawBatch();
     }
+    currentIsReask = isReask(round);
+    updateCounter();
     const code = getCurrentCode(round);
-    const { position, total } = getProgress(round);
-    progress.textContent = isReask(round) ? `${position} / ${total} · again` : `${position} / ${total}`;
     feedback.textContent = '';
     feedback.classList.remove('is-correct-feedback', 'is-wrong-feedback');
     nextButton.hidden = true;
@@ -123,8 +135,13 @@ export function mount(container, context) {
     const result = answerCurrent(round, correct);
     round = result.round;
     if (result.isFirstAnswer) {
+      sessionAnswered += 1;
+      if (correct) {
+        sessionCorrect += 1;
+      }
+      updateCounter();
       // Load fresh before writing, so the save never rolls back state written
-      // elsewhere since this round started.
+      // elsewhere since this batch started.
       const today = localToday();
       const recorded = recordAnswer({
         states: loadStates(today),
@@ -164,16 +181,7 @@ export function mount(container, context) {
 
   function startRound() {
     clearAdvance();
-    const today = localToday();
-    const codes = pickRound({
-      states: loadStates(today),
-      countries,
-      today,
-      region,
-      rng: Math.random,
-      n: ROUND_SIZE
-    });
-    round = createRound(codes);
+    round = drawBatch();
     if (isRoundComplete(round)) {
       // Only possible if the region has no flags at all.
       const doneButton = el('button', { type: 'button', class: 'button button-secondary' }, ['Done']);

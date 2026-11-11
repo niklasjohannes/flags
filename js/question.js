@@ -38,9 +38,9 @@ export const ANSWER_GUARD_MS = 300;
  * run before the options' own:
  *   - a click (including an Enter / Space activation) within
  *     `ANSWER_GUARD_MS` of `arm()` is swallowed;
- *   - a key auto-repeat on a button is swallowed: a held Enter on Next or
- *     Keep going repeats on the newly focused option, and only the first
- *     press may count. Typing into the input may still repeat.
+ *   - a key auto-repeat on a button is swallowed: a held Enter on Next
+ *     repeats on the newly focused option, and only the first press may
+ *     count. Typing into the input may still repeat.
  *
  * @param {HTMLElement} area The question's container (what is passed to
  *   `renderQuestion`).

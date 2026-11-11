@@ -381,7 +381,8 @@ describe('recordAnswer', () => {
 describe('several all-correct rounds on one day', () => {
   // Play `rounds` all-correct rounds over South America (13 flags, so
   // `pickRound` soon refills rounds with flags answered minutes ago).
-  // `newVisitEachRound` models Done then Start instead of Keep going.
+  // `newVisitEachRound` models exiting and starting again instead of
+  // continuing the same visit across several batches.
   function playSitting({ rounds, newVisitEachRound, seed }) {
     const rng = createRng(seed);
     let states = {};
@@ -410,7 +411,7 @@ describe('several all-correct rounds on one day', () => {
   }
 
   for (const newVisitEachRound of [false, true]) {
-    const label = newVisitEachRound ? 'Done then Start' : 'Keep going';
+    const label = newVisitEachRound ? 'a new visit each time' : 'several batches in one visit';
     it(`never grows an interval past the first step (${label})`, () => {
       for (let seed = 1; seed <= 20; seed += 1) {
         const states = playSitting({ rounds: 4, newVisitEachRound, seed });
@@ -423,7 +424,7 @@ describe('several all-correct rounds on one day', () => {
   }
 });
 
-describe('Keep going on a fresh profile (GitHub #32)', () => {
+describe('continued practice on a fresh profile (GitHub #32)', () => {
   it('shows 40 distinct flags in 4 all-correct rounds over All', () => {
     for (let seed = 1; seed <= 20; seed += 1) {
       const rng = createRng(seed);

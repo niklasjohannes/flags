@@ -25,8 +25,8 @@
 
 // ---- Tunables ----
 
-/** Questions per practice round (spec #5). */
-export const ROUND_SIZE = 10;
+/** Questions per batch drawn by `pickRound` for endless practice (GitHub #40). */
+export const BATCH_SIZE = 10;
 
 /** Ease factor of a never-seen flag; SM-2's starting value. */
 export const INITIAL_EASE_FACTOR = 2.5;
@@ -451,8 +451,8 @@ function classifyScope(states, countries, today, region) {
  *      randomly chosen never-seen flags at `NEW_FLAG_WEIGHT`;
  *   2. if tier 1 cannot fill the round, further never-seen flags at random
  *      (owner decision on GitHub #32: new flags before re-using flags that
- *      are not due yet, so Keep going on day 1 shows new flags instead of
- *      the ones just answered);
+ *      are not due yet, so continued practice on day 1 shows new flags
+ *      instead of the ones just answered);
  *   3. only once the scope has no never-seen flags left, seen flags that are
  *      not yet due, with a small non-zero weight favouring harder and
  *      closer-to-due flags.
@@ -469,11 +469,11 @@ function classifyScope(states, countries, today, region) {
  * @param {string} options.today Local date, `YYYY-MM-DD`.
  * @param {string} [options.region] One of `REGIONS`; omit for all regions.
  * @param {() => number} options.rng Random source returning `[0, 1)`.
- * @param {number} [options.n=ROUND_SIZE] Round size.
+ * @param {number} [options.n=BATCH_SIZE] Batch size.
  * @returns {string[]} Up to `n` distinct codes; fewer only if the scope has
  *   fewer than `n` flags.
  */
-export function pickRound({ states, countries, today, region, rng, n = ROUND_SIZE } = {}) {
+export function pickRound({ states, countries, today, region, rng, n = BATCH_SIZE } = {}) {
   assertStates(states);
   assertCountries(countries);
   assertDate(today, 'today');
