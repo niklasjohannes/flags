@@ -28,7 +28,7 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ICONS_DIR = join(REPO_ROOT, 'icons');
 
 /** Tile colour: white. */
-export const ACCENT_RGB = Object.freeze([0xff, 0xff, 0xff]);
+export const TILE_RGB = Object.freeze([0xff, 0xff, 0xff]);
 /** Mark colour (`--color-text` in css/style.css). */
 const MARK_RGB = Object.freeze([0x11, 0x11, 0x11]);
 
@@ -156,7 +156,7 @@ export function renderIcon(variant, size) {
       const offset = (py * size + px) * 4;
       const markShare = tileHits === 0 ? 0 : markHits / tileHits;
       for (let c = 0; c < 3; c += 1) {
-        pixels[offset + c] = Math.round(ACCENT_RGB[c] + (MARK_RGB[c] - ACCENT_RGB[c]) * markShare);
+        pixels[offset + c] = Math.round(TILE_RGB[c] + (MARK_RGB[c] - TILE_RGB[c]) * markShare);
       }
       pixels[offset + 3] = Math.round((255 * tileHits) / samples);
     }
@@ -265,7 +265,7 @@ export function renderSvg(variant) {
   const hex = (rgb) => `#${rgb.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">',
-    `<rect width="100" height="100" rx="${formatNumber(tileRadius)}" fill="${hex(ACCENT_RGB)}"/>`,
+    `<rect width="100" height="100" rx="${formatNumber(tileRadius)}" fill="${hex(TILE_RGB)}"/>`,
     `<g fill="${hex(MARK_RGB)}">`,
     `<rect x="${toIcon(POLE.x0)}" y="${toIcon(POLE.y0)}" width="${formatNumber(poleWidth)}" height="${formatNumber(poleHeight)}" rx="${formatNumber(POLE.r * markScale)}"/>`,
     `<path d="${cloth}"/>`,
