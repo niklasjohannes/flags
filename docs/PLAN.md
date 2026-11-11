@@ -82,7 +82,7 @@ This logic lives in pure, dependency-free functions so it's easy to reason about
 
 ### Screens & flows
 
-- **Home screen**: continent filter (defaults to "All" every time the app is opened — never remembered), a mode toggle (multiple choice / typing), a due-count scoped to the current filter selection, a **Start** button (practice), and a separate **Test** button. No other stats shown (no streak, no accuracy) — kept to a single glance.
+- **Home screen**: continent filter (defaults to "All" every time the app is opened — never remembered), a mode toggle (multiple choice / typing), a total flag count scoped to the current filter selection (independent of SRS state, so it never drops to zero from practising — owner decision on GitHub #39), a **Start** button (practice), and a separate **Test** button. No other stats shown (no streak, no accuracy) — kept to a single glance.
 - **Practice session**: fixed rounds of 10 questions, drawn via the SRS scheduler above (scoped to the chosen continent filter). At the end of a round, show a short summary (e.g. "9/10 correct") with "Keep going" (starts another round) or "Done" (back to home).
 - **Test mode**: user picks "All" or a continent, then answers every flag in that scope once, blind (no per-question right/wrong feedback, no indication of progress beyond a simple counter like "42/195"), untimed. At the end, show a results screen: score (e.g. "182/195, 93%") and the specific list of missed flags. Entirely separate from SRS state — purely a self-assessment snapshot.
 - **New (never-seen) flags**: appear like any other question, in whichever mode is active — no dedicated "teaching" step. A miss on a brand-new flag is just a normal SRS lapse, which naturally brings it back around soon.

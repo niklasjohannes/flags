@@ -1,12 +1,12 @@
 // Home screen (spec #4, PLAN decisions 1-2): continent filter, quiz mode,
-// the number of flags waiting, Start and Test. Nothing else, apart from the
+// the total flag count, Start and Test. Nothing else, apart from the
 // quiet "Backup" link in the footer (spec #8, owner decision on GitHub #9),
 // which opens js/backup-sheet.js.
 
 import { createBackupSheet } from '../backup-sheet.js';
 import { takeStaleResume } from '../resume.js';
-import { REGIONS, countDue } from '../srs.js';
-import { loadMode, loadStates, localToday, saveMode } from '../storage.js';
+import { REGIONS, countFlags } from '../srs.js';
+import { loadMode, localToday, saveMode } from '../storage.js';
 import { ALL_REGIONS_LABEL, MODE_LABELS, REGION_LABELS, createChoiceGroup, el } from '../ui.js';
 
 // Radio value of "All"; maps to `region: null` everywhere else.
@@ -60,9 +60,7 @@ export function mount(container, context) {
   const { signal } = controller;
   const { countries, navigate } = context;
 
-  // Read once per visit, so the count reflects answers saved by practice.
   const today = localToday();
-  const states = loadStates(today);
   selectedMode ??= loadMode();
 
   // iOS resumes an installed app from the background without reloading. If
@@ -102,10 +100,9 @@ export function mount(container, context) {
   const countNumber = el('span', { class: 'due-number' });
   const countLabel = el('span', { class: 'due-label' });
   const updateCount = () => {
-    const { due, new: fresh } = countDue({ states, countries, today, region: selectedRegion });
-    const waiting = due + fresh;
-    countNumber.textContent = String(waiting);
-    countLabel.textContent = waiting === 1 ? 'flag waiting' : 'flags waiting';
+    const total = countFlags({ countries, region: selectedRegion });
+    countNumber.textContent = String(total);
+    countLabel.textContent = total === 1 ? 'flag' : 'flags';
   };
 
   const regionGroup = createChoiceGroup({
