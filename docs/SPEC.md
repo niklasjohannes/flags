@@ -112,9 +112,9 @@ Implement MC distractor selection (same-region preferred, **excluding the flag's
 
 Depends on: #1, #2, #3.
 
-Build `index.html` + base `css/style.css` + `js/app.js` view-routing skeleton. Home screen: continent filter (always defaults to "All" on load — never persisted), mode toggle (MC/typing), due-count scoped to the current filter (wired to `srs.js`), Start button, Test button. No other stats on this screen.
+Build `index.html` + base `css/style.css` + `js/app.js` view-routing skeleton. Home screen: continent filter (always defaults to "All" on load — never persisted), mode toggle (MC/typing), flag count scoped to the current filter (wired to `srs.js`; changed from a due-count to a total count on GitHub #39), Start button, Test button. No other stats on this screen.
 
-**Acceptance criteria**: manually verified in the browser preview (desktop + 375×812 mobile viewport) that reloading always resets the filter to "All" and the due-count updates when the filter changes.
+**Acceptance criteria**: manually verified in the browser preview (desktop + 375×812 mobile viewport) that reloading always resets the filter to "All" and the count updates when the filter changes.
 
 ---
 

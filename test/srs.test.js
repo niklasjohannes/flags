@@ -14,6 +14,7 @@ import {
   REQUEUE_GAP,
   ROUND_SIZE,
   countDue,
+  countFlags,
   createCardState,
   isNewCard,
   pickRound,
@@ -532,6 +533,36 @@ describe('countDue', () => {
     assert.throws(() => countDue(), TypeError);
     assert.throws(() => countDue({ states, countries, today: 'today' }), TypeError);
     assert.throws(() => countDue({ states, countries, today: TODAY, region: 'Europe' }), RangeError);
+  });
+});
+
+// ---- Flag count ----
+
+describe('countFlags', () => {
+  const countries = [
+    ...makeCountries('eu', 6, 'europe'),
+    ...makeCountries('as', 4, 'asia')
+  ];
+
+  it('counts the total number of distinct flags in scope', () => {
+    assert.equal(countFlags({ countries }), 10);
+  });
+
+  it('scopes to a region', () => {
+    assert.equal(countFlags({ countries, region: 'europe' }), 6);
+    assert.equal(countFlags({ countries, region: 'asia' }), 4);
+    assert.equal(countFlags({ countries, region: 'oceania' }), 0);
+  });
+
+  it('dedupes duplicate codes in `countries`', () => {
+    assert.equal(countFlags({ countries: [...countries, countries[0]] }), 10);
+  });
+
+  it('rejects invalid input', () => {
+    assert.throws(() => countFlags(), TypeError);
+    assert.throws(() => countFlags({ countries: {} }), TypeError);
+    assert.throws(() => countFlags({ countries: [{ code: 'c0' }] }), TypeError);
+    assert.throws(() => countFlags({ countries, region: 'Europe' }), RangeError);
   });
 });
 

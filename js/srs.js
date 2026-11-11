@@ -527,6 +527,29 @@ export function countDue({ states, countries, today, region } = {}) {
   return { due: due.length, new: fresh.length };
 }
 
+/**
+ * Count the total number of flags in a scope, for the home screen (GitHub
+ * #39). Independent of SRS state, so it never decreases as the user
+ * practises; it only changes when the scope itself changes.
+ *
+ * @param {object} options
+ * @param {{ code: string, region: string }[]} options.countries All flags.
+ * @param {string} [options.region] One of `REGIONS`; omit for all regions.
+ * @returns {number} Total distinct flag count in scope.
+ */
+export function countFlags({ countries, region } = {}) {
+  assertCountries(countries);
+  assertRegion(region);
+  const seen = new Set();
+  for (const country of countries) {
+    const inScope = region === undefined || region === null || country.region === region;
+    if (inScope) {
+      seen.add(country.code);
+    }
+  }
+  return seen.size;
+}
+
 // ---- Untrusted input ----
 
 function sanitizeInteger(value, fallback, min) {
