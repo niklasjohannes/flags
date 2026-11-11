@@ -486,7 +486,7 @@ input {
   font-size: 2rem;
 }
 
-.view-home .due-count {
+.view-home .flag-count {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -494,7 +494,7 @@ input {
   margin: var(--space-2) 0 0;
 }
 
-.view-home .due-number {
+.view-home .flag-count-number {
   font-size: 3.5rem;
   font-weight: 700;
   line-height: 1;
@@ -502,7 +502,7 @@ input {
   font-variant-numeric: tabular-nums;
 }
 
-.view-home .due-label {
+.view-home .flag-count-label {
   color: var(--color-text-muted);
   font-weight: var(--font-weight-muted);
 }

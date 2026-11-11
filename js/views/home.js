@@ -97,8 +97,8 @@ export function mount(container, context) {
     }
   }, { signal });
 
-  const countNumber = el('span', { class: 'due-number' });
-  const countLabel = el('span', { class: 'due-label' });
+  const countNumber = el('span', { class: 'flag-count-number' });
+  const countLabel = el('span', { class: 'flag-count-label' });
   const updateCount = () => {
     const total = countFlags({ countries, region: selectedRegion });
     countNumber.textContent = String(total);
@@ -154,7 +154,7 @@ export function mount(container, context) {
     el('h1', { class: 'home-title' }, ['Flags']),
     regionGroup,
     modeGroup,
-    el('p', { class: 'due-count', 'aria-live': 'polite' }, [countNumber, ' ', countLabel]),
+    el('p', { class: 'flag-count', 'aria-live': 'polite' }, [countNumber, ' ', countLabel]),
     el('div', { class: 'view-actions home-actions' }, [startButton, testButton]),
     el('div', { class: 'home-footer' }, [backupButton]),
     backupSheet.dialog
